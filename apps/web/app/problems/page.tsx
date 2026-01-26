@@ -2,11 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, CheckCircle2, Circle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
-import { cn, getDifficultyColor } from '@/lib/utils';
 import { problemsApi } from '@/lib/api';
 
 interface Problem {
@@ -37,7 +32,7 @@ export default function ProblemsPage() {
             setLoading(true);
             const params: Record<string, string> = {
                 page: page.toString(),
-                limit: '20',
+                limit: '50', // Higher density = more items per page
             };
             if (search) params.search = search;
             if (difficulty !== 'All') params.difficulty = difficulty;
@@ -60,158 +55,112 @@ export default function ProblemsPage() {
         }
     }
 
-    const getDifficultyBadgeVariant = (diff: string) => {
-        switch (diff.toLowerCase()) {
-            case 'easy': return 'success';
-            case 'medium': return 'warning';
-            case 'hard': return 'destructive';
-            default: return 'secondary';
-        }
-    };
-
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col gap-6">
-                {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-bold mb-2">Problems</h1>
-                    <p className="text-muted-foreground">
-                        Solve coding challenges and improve your skills
-                    </p>
-                </div>
+        <div className="font-verdana text-[13px]">
+            <div className="bg-white border border-[#CCCCCC] p-4 text-[#333333]">
+                <h1 className="text-xl text-[#0056b3] font-bold mb-4">Problems</h1>
 
                 {/* Filters */}
-                <Card className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        {/* Search */}
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Search problems..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                            />
-                        </div>
-
-                        {/* Difficulty Filter */}
-                        <div className="flex gap-2">
-                            {difficulties.map((d) => (
-                                <Button
-                                    key={d}
-                                    variant={difficulty === d ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setDifficulty(d)}
-                                >
-                                    {d}
-                                </Button>
-                            ))}
-                        </div>
+                <div className="flex gap-4 mb-4 items-center bg-[#F0F0F0] p-2 border border-[#CCCCCC]">
+                    <div className="flex items-center gap-2">
+                        <label className="font-bold">Search:</label>
+                        <input
+                            type="text"
+                            placeholder="Search problems..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="border border-[#CCCCCC] px-2 py-1 w-64"
+                        />
                     </div>
-                </Card>
 
-                {/* Problems Table */}
-                <Card className="overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-muted/50">
+                    <div className="flex items-center gap-2">
+                        <label className="font-bold">Difficulty:</label>
+                        <select
+                            value={difficulty}
+                            onChange={(e) => setDifficulty(e.target.value)}
+                            className="border border-[#CCCCCC] px-2 py-1 bg-white"
+                        >
+                            {difficulties.map(d => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Dense Table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-left border border-[#CCCCCC]">
+                        <thead>
+                            <tr className="bg-[#FFFFFF] border-b border-[#CCCCCC]">
+                                <th className="px-2 py-1 text-center w-12 border-r border-[#CCCCCC]">#</th>
+                                <th className="px-2 py-1 border-r border-[#CCCCCC]">Name</th>
+                                <th className="px-2 py-1 border-r border-[#CCCCCC]">Tags</th>
+                                <th className="px-2 py-1 border-r border-[#CCCCCC] w-24 text-center">Difficulty</th>
+                                <th className="px-2 py-1 w-24 text-center">Solved</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Title</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Difficulty</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">Tags</th>
+                                    <td colSpan={5} className="px-2 py-4 text-center">Loading...</td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {loading ? (
-                                    // Loading skeleton
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <tr key={i} className="animate-pulse">
-                                            <td className="px-4 py-4">
-                                                <div className="h-5 w-5 bg-muted rounded-full" />
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="h-4 w-48 bg-muted rounded" />
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="h-5 w-16 bg-muted rounded-full" />
-                                            </td>
-                                            <td className="px-4 py-4 hidden md:table-cell">
-                                                <div className="h-5 w-24 bg-muted rounded-full" />
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : problems.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                                            No problems found
+                            ) : problems.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-2 py-4 text-center">No problems found</td>
+                                </tr>
+                            ) : (
+                                problems.map((problem, index) => (
+                                    <tr key={problem.id} className="even:bg-[#F8F8F8] hover:bg-[#E8E8E8]">
+                                        <td className="px-2 py-1 text-center border-r border-[#CCCCCC]">{problem.id}</td>
+                                        <td className="px-2 py-1 border-r border-[#CCCCCC]">
+                                            <Link
+                                                href={`/problems/${problem.slug}`}
+                                                className="text-[#0056b3] font-bold hover:underline"
+                                            >
+                                                {problem.title}
+                                            </Link>
+                                        </td>
+                                        <td className="px-2 py-1 border-r border-[#CCCCCC]">
+                                            <span className="text-[11px] text-gray-500">
+                                                {problem.tags.join(', ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-2 py-1 text-center border-r border-[#CCCCCC]">
+                                            {problem.difficulty}
+                                        </td>
+                                        <td className="px-2 py-1 text-center">
+                                            {problem.solved && <span className="text-green-600 font-bold">✓</span>}
+                                            {!problem.solved && <span className="text-gray-300">-</span>}
                                         </td>
                                     </tr>
-                                ) : (
-                                    problems.map((problem) => (
-                                        <tr key={problem.id} className="hover:bg-muted/50 transition-colors">
-                                            <td className="px-4 py-4">
-                                                {problem.solved ? (
-                                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                                ) : (
-                                                    <Circle className="h-5 w-5 text-muted-foreground" />
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <Link
-                                                    href={`/problems/${problem.slug}`}
-                                                    className="font-medium hover:text-primary transition-colors"
-                                                >
-                                                    {problem.title}
-                                                </Link>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <Badge variant={getDifficultyBadgeVariant(problem.difficulty)}>
-                                                    {problem.difficulty}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-4 py-4 hidden md:table-cell">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {problem.tags.slice(0, 3).map((tag) => (
-                                                        <Badge key={tag} variant="outline" className="text-xs">
-                                                            {tag}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="flex justify-center gap-2 p-4 border-t">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page <= 1}
-                                onClick={() => setPage(page - 1)}
-                            >
-                                Previous
-                            </Button>
-                            <span className="flex items-center px-3 text-sm text-muted-foreground">
-                                Page {page} of {totalPages}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page >= totalPages}
-                                onClick={() => setPage(page + 1)}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    )}
-                </Card>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex justify-center gap-2 mt-4">
+                        <button
+                            disabled={page <= 1}
+                            onClick={() => setPage(page - 1)}
+                            className="px-3 py-1 border border-[#CCCCCC] disabled:opacity-50 hover:bg-[#E0E0E0]"
+                        >
+                            &larr; Prev
+                        </button>
+                        <span className="px-3 py-1">
+                            Page {page} of {totalPages}
+                        </span>
+                        <button
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(page + 1)}
+                            className="px-3 py-1 border border-[#CCCCCC] disabled:opacity-50 hover:bg-[#E0E0E0]"
+                        >
+                            Next &rarr;
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

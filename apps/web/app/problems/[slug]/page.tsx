@@ -3,22 +3,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { Play, Send, Loader2, ChevronDown, Terminal } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
 import { ProblemDescription } from '@/components/problems/ProblemDescription';
 import { Console } from '@/components/editor/Console';
 import { problemsApi, submissionsApi } from '@/lib/api';
 import { connectSocket, onSubmissionStatus, SubmissionStatusUpdate } from '@/lib/socket';
-import { cn, getDifficultyColor } from '@/lib/utils';
 import { LANGUAGE_CONFIG, STARTER_CODE, Language } from '@codelab/shared';
 
 // Dynamic import for Monaco Editor (client-side only)
 const CodeEditor = dynamic(
     () => import('@/components/editor/CodeEditor').then(mod => mod.CodeEditor),
-    { ssr: false, loading: () => <div className="h-full bg-muted animate-pulse" /> }
+    { ssr: false, loading: () => <div className="h-[500px] bg-white border border-[#CCCCCC] flex items-center justify-center">Loading Editor...</div> }
 );
 
 interface Problem {
@@ -85,22 +82,7 @@ export default function ProblemPage() {
 
 Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to \`target\`*.
 
-You may assume that each input would have **exactly one solution**, and you may not use the same element twice.
-
-## Example 1:
-
-\`\`\`
-Input: nums = [2,7,11,15], target = 9
-Output: [0,1]
-Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
-\`\`\`
-
-## Example 2:
-
-\`\`\`
-Input: nums = [3,2,4], target = 6
-Output: [1,2]
-\`\`\``,
+You may assume that each input would have **exactly one solution**, and you may not use the same element twice.`,
                     constraints: [
                         '2 <= nums.length <= 10^4',
                         '-10^9 <= nums[i] <= 10^9',
@@ -240,148 +222,155 @@ Output: [1,2]
         }
     };
 
-    const getDifficultyBadgeVariant = (diff: string) => {
-        switch (diff.toLowerCase()) {
-            case 'easy': return 'success';
-            case 'medium': return 'warning';
-            case 'hard': return 'destructive';
-            default: return 'secondary';
-        }
-    };
-
     if (loading) {
         return (
-            <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex h-screen items-center justify-center">
+                Loading...
             </div>
         );
     }
 
     if (!problem) {
         return (
-            <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
-                <p className="text-muted-foreground">Problem not found</p>
+            <div className="container mx-auto py-8 text-center text-red-500">
+                Problem not found
             </div>
         );
     }
 
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-                <div className="flex items-center gap-3">
-                    <h1 className="font-semibold">{problem.title}</h1>
-                    <Badge variant={getDifficultyBadgeVariant(problem.difficulty)}>
-                        {problem.difficulty}
-                    </Badge>
-                </div>
+        <div className="container mx-auto p-6 font-verdana text-[13px] text-[#333333]">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                <div className="flex items-center gap-2">
-                    {/* Language Selector */}
-                    <div className="relative">
-                        <select
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value as Language)}
-                            className="appearance-none bg-background border border-input rounded-md px-3 py-1.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                            {languages.map((lang) => (
-                                <option key={lang.value} value={lang.value}>
-                                    {lang.label}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none text-muted-foreground" />
+                {/* Left Content Column (Statement + Editor) */}
+                <div className="lg:col-span-3 space-y-6">
+                    {/* Problem Title & Headers */}
+                    <div className="border-b border-[#CCCCCC] pb-4">
+                        <h1 className="text-2xl font-bold text-[#333333] mb-2">
+                            {problem.id}. {problem.title}
+                        </h1>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>time limit per test: {problem.timeLimit / 1000} seconds</span>
+                            <span>memory limit per test: {problem.memoryLimit} megabytes</span>
+                            <span>input: standard input</span>
+                            <span>output: standard output</span>
+                        </div>
                     </div>
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRun}
-                        disabled={isRunning || isSubmitting}
-                    >
-                        {isRunning ? (
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                            <Play className="h-4 w-4 mr-1" />
-                        )}
-                        Run
-                    </Button>
+                    {/* Description */}
+                    <div className="bg-white">
+                        <ProblemDescription
+                            description={problem.description}
+                            constraints={problem.constraints}
+                            sampleTestCases={problem.sampleTestCases}
+                            timeLimit={problem.timeLimit}
+                            memoryLimit={problem.memoryLimit}
+                        />
+                    </div>
 
-                    <Button
-                        size="sm"
-                        onClick={handleSubmit}
-                        disabled={isRunning || isSubmitting}
-                    >
-                        {isSubmitting ? (
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                            <Send className="h-4 w-4 mr-1" />
-                        )}
-                        Submit
-                    </Button>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 overflow-hidden">
-                <PanelGroup direction="horizontal">
-                    {/* Problem Description Panel */}
-                    <Panel defaultSize={40} minSize={25}>
-                        <div className="h-full overflow-auto p-4">
-                            <ProblemDescription
-                                description={problem.description}
-                                constraints={problem.constraints}
-                                sampleTestCases={problem.sampleTestCases}
-                                timeLimit={problem.timeLimit}
-                                memoryLimit={problem.memoryLimit}
-                            />
+                    {/* Editor Section */}
+                    <div className="border border-[#CCCCCC] p-1 bg-[#E1E1E1]">
+                        {/* Toolbar */}
+                        <div className="flex items-center justify-between p-2 bg-[#F0F0F0] border-b border-[#CCCCCC] mb-1">
+                            <div className="flex items-center gap-2">
+                                <label className="font-bold text-xs">Language:</label>
+                                <select
+                                    value={language}
+                                    onChange={(e) => setLanguage(e.target.value as Language)}
+                                    className="border border-[#CCCCCC] px-2 py-0.5 text-xs"
+                                >
+                                    {languages.map((lang) => (
+                                        <option key={lang.value} value={lang.value}>
+                                            {lang.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleRun}
+                                    disabled={isRunning || isSubmitting}
+                                    className="px-3 py-1 bg-white border border-[#CCCCCC] text-xs font-bold hover:bg-[#E0E0E0]"
+                                >
+                                    Run
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isRunning || isSubmitting}
+                                    className="px-3 py-1 bg-[#DDDDDD] border border-[#CCCCCC] text-xs font-bold hover:bg-[#CCCCCC]"
+                                >
+                                    Submit
+                                </button>
+                            </div>
                         </div>
-                    </Panel>
 
-                    <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
+                        {/* Editor */}
+                        <CodeEditor
+                            value={code}
+                            onChange={setCode}
+                            language={LANGUAGE_CONFIG[language].monacoLanguage}
+                        />
 
-                    {/* Code Editor Panel */}
-                    <Panel defaultSize={60} minSize={30}>
-                        <PanelGroup direction="vertical">
-                            {/* Editor */}
-                            <Panel defaultSize={showConsole ? 70 : 100} minSize={30}>
-                                <CodeEditor
-                                    value={code}
-                                    onChange={setCode}
-                                    language={LANGUAGE_CONFIG[language].monacoLanguage}
-                                />
-                            </Panel>
-
-                            {/* Console */}
-                            {showConsole && (
-                                <>
-                                    <PanelResizeHandle className="h-1 bg-border hover:bg-primary/50 transition-colors" />
-                                    <Panel defaultSize={30} minSize={15}>
-                                        <Console
-                                            output={consoleOutput}
-                                            onClose={() => setShowConsole(false)}
-                                        />
-                                    </Panel>
-                                </>
-                            )}
-
-                            {/* Console Toggle */}
-                            {!showConsole && (
-                                <div className="border-t p-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setShowConsole(true)}
-                                        className="w-full justify-start"
-                                    >
-                                        <Terminal className="h-4 w-4 mr-2" />
-                                        Console
-                                    </Button>
+                        {/* Console */}
+                        {showConsole && (
+                            <div className="mt-2 border-t border-[#CCCCCC] bg-white p-2">
+                                <div className="flex justify-between items-center mb-2 border-b border-[#EEEEEE] pb-1">
+                                    <span className="font-bold text-xs text-gray-500">Output</span>
+                                    <button onClick={() => setShowConsole(false)} className="text-xs text-blue-600 hover:underline">Close</button>
                                 </div>
-                            )}
-                        </PanelGroup>
-                    </Panel>
-                </PanelGroup>
+                                <div className="h-32 overflow-y-auto font-mono text-xs">
+                                    {consoleOutput.map((out, idx) => (
+                                        <div key={idx} className={
+                                            out.type === 'error' ? 'text-red-600' :
+                                                out.type === 'success' ? 'text-green-600' :
+                                                    'text-black'
+                                        }>
+                                            {out.message}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Sidebar */}
+                <div className="lg:col-span-1 space-y-6">
+                    {/* Info/Submit Box */}
+                    <div className="border border-[#CCCCCC] p-4 bg-white">
+                        <h3 className="font-bold border-b border-[#CCCCCC] pb-2 mb-2 text-[#0056b3]">Problem Info</h3>
+                        <div className="space-y-2 text-xs">
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Difficulty:</span>
+                                <span className="font-bold">{problem.difficulty}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">ID:</span>
+                                <span>{problem.id}</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-[#CCCCCC]">
+                            <button className="w-full bg-[#E1E1E1] border border-[#CCCCCC] py-1 text-xs hover:bg-[#D1D1D1] mb-2" onClick={() => {
+                                document.querySelector('.monaco-editor')?.scrollIntoView({ behavior: 'smooth' });
+                            }}>
+                                Submit?
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Tags Box */}
+                    <div className="border border-[#CCCCCC] p-4 bg-white">
+                        <h3 className="font-bold border-b border-[#CCCCCC] pb-2 mb-2 text-[#0056b3]">Tags</h3>
+                        <div className="flex flex-wrap gap-1">
+                            {problem.tags.map(tag => (
+                                <span key={tag} className="text-xs bg-[#F0F0F0] border border-[#EEEEEE] px-1 text-gray-600">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

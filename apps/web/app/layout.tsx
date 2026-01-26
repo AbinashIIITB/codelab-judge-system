@@ -20,17 +20,10 @@ export default function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning>
             <body className={inter.className}>
-                <ThemeProvider
-                    attribute="class"
-                    defaultTheme="dark"
-                    enableSystem
-                    disableTransitionOnChange
-                >
-                    <div className="min-h-screen bg-background">
-                        <Navbar />
-                        <main>{children}</main>
-                    </div>
-                </ThemeProvider>
+                <div className="max-w-[1200px] mx-auto bg-white min-h-screen border-x border-[#CCCCCC] shadow-sm">
+                    <Navbar />
+                    <main className="p-4">{children}</main>
+                </div>
             </body>
         </html>
     );

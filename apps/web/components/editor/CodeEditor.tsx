@@ -1,7 +1,6 @@
 'use client';
 
 import Editor from '@monaco-editor/react';
-import { useTheme } from 'next-themes';
 
 interface CodeEditorProps {
     value: string;
@@ -10,22 +9,20 @@ interface CodeEditorProps {
 }
 
 export function CodeEditor({ value, onChange, language }: CodeEditorProps) {
-    const { resolvedTheme } = useTheme();
-
     return (
-        <div className="h-full w-full">
+        <div className="h-[500px] w-full border border-[#CCCCCC]">
             <Editor
                 height="100%"
                 language={language}
                 value={value}
                 onChange={(val) => onChange(val || '')}
-                theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'}
+                theme="vs-light"
                 options={{
-                    fontSize: 14,
-                    fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
+                    fontSize: 13,
+                    fontFamily: 'Consolas, "Courier New", monospace',
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
-                    padding: { top: 16, bottom: 16 },
+                    padding: { top: 12, bottom: 12 },
                     lineNumbers: 'on',
                     glyphMargin: false,
                     folding: true,
@@ -40,6 +37,16 @@ export function CodeEditor({ value, onChange, language }: CodeEditorProps) {
                     acceptSuggestionOnEnter: 'on',
                     quickSuggestions: true,
                     snippetSuggestions: 'top',
+                    renderLineHighlight: 'none',
+                    overviewRulerLanes: 0,
+                    hideCursorInOverviewRuler: true,
+                    scrollbar: {
+                        vertical: 'visible',
+                        horizontal: 'visible',
+                        useShadows: false,
+                        verticalScrollbarSize: 10,
+                        horizontalScrollbarSize: 10,
+                    },
                 }}
             />
         </div>
