@@ -1,0 +1,30 @@
+{
+    "name": "@codelab/worker",
+    "version": "1.0.0",
+    "private": true,
+    "main": "dist/worker.js",
+    "scripts": {
+        "dev": "tsx watch src/worker.ts",
+        "build": "tsc",
+        "start": "node dist/worker.js",
+        "lint": "eslint src/",
+        "test": "jest"
+    },
+    "dependencies": {
+        "@codelab/shared": "*",
+        "bullmq": "^5.1.0",
+        "dockerode": "^4.0.2",
+        "dotenv": "^16.3.1",
+        "ioredis": "^5.3.2",
+        "mongoose": "^8.0.3",
+        "socket.io-client": "^4.7.2"
+    },
+    "devDependencies": {
+        "@types/dockerode": "^3.3.23",
+        "@types/node": "^20.10.0",
+        "@typescript-eslint/eslint-plugin": "^6.13.0",
+        "@typescript-eslint/parser": "^6.13.0",
+        "tsx": "^4.6.2",
+        "typescript": "^5.3.0"
+    }
+}
