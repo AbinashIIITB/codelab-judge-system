@@ -36,12 +36,7 @@ const features = [
     },
 ];
 
-const stats = [
-    { value: '500+', label: 'Problems' },
-    { value: '50K+', label: 'Users' },
-    { value: '1M+', label: 'Submissions' },
-    { value: '99.9%', label: 'Uptime' },
-];
+// stats array removed as it is no longer used
 
 export default function HomePage() {
     return (
@@ -57,8 +52,8 @@ export default function HomePage() {
                 <div className="container mx-auto px-4">
                     <div className="text-center max-w-4xl mx-auto">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-sm mb-6">
-                            <Zap className="h-4 w-4" />
-                            <span>New: Real-time collaborative coding</span>
+                            <Code2 className="h-4 w-4" />
+                            <span>Built with Next.js, Docker, Monorepo, & Microservices</span>
                         </div>
 
                         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
@@ -88,18 +83,25 @@ export default function HomePage() {
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="py-12 bg-muted/50">
+            {/* Project Info Section */}
+            <section className="py-12 bg-muted/50 border-y border-[#CCCCCC]">
                 <div className="container mx-auto px-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        {stats.map((stat, index) => (
-                            <div key={index} className="text-center">
-                                <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                                    {stat.value}
-                                </div>
-                                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                    <div className="flex flex-col md:flex-row justify-around items-center gap-8">
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-[#333333] mb-1">Project by</h3>
+                            <p className="text-lg text-[#555555]">Abinash Mohanty</p>
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-[#333333] mb-1">Institution</h3>
+                            <p className="text-lg text-[#555555]">IIIT Bhubaneswar</p>
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-[#333333] mb-1">Status</h3>
+                            <div className="flex items-center gap-2 justify-center text-lg text-[#555555]">
+                                <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                                99.9% Uptime
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </div>
             </section>
@@ -161,8 +163,13 @@ export default function HomePage() {
                             </div>
                             <span className="font-semibold">CodeLab</span>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                            © {new Date().getFullYear()} CodeLab. All rights reserved.
+                        <div className="flex flex-col text-right">
+                            <div className="text-sm text-muted-foreground">
+                                © {new Date().getFullYear()} CodeLab. All rights reserved.
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Project by <span className="font-semibold text-[#333333]">Abinash Mohanty</span> • <span className="font-semibold text-[#333333]">IIIT Bhubaneswar</span>
+                            </div>
                         </div>
                     </div>
                 </div>

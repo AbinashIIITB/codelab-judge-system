@@ -2,9 +2,7 @@
 const nextConfig = {
     reactStrictMode: true,
     transpilePackages: ['@codelab/shared'],
-    experimental: {
-        serverActions: true,
-    },
+    experimental: {},
     images: {
         domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
     },

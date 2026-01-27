@@ -38,11 +38,11 @@ export function Navbar() {
 
                 {/* Auth/Actions */}
                 <div className="flex items-center space-x-4">
-                    <Link href="/auth/signin" className="hover:text-[#CCCCCC] transition-colors">
-                        ENTER
+                    <Link href="/auth/signin" className="text-white hover:text-gray-300 transition-colors font-medium">
+                        Login
                     </Link>
                     <span className="text-gray-500">|</span>
-                    <Link href="/auth/signup" className="hover:text-[#CCCCCC] transition-colors">
+                    <Link href="/auth/signup" className="text-white hover:text-gray-300 transition-colors font-medium">
                         REGISTER
                     </Link>
                 </div>
