@@ -90,10 +90,7 @@ export default function HomePage() {
                         <div className="text-center">
                             <h3 className="text-xl font-bold text-[#333333] mb-1">Project by</h3>
                             <p className="text-lg text-[#555555]">Abinash Mohanty</p>
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-xl font-bold text-[#333333] mb-1">Institution</h3>
-                            <p className="text-lg text-[#555555]">IIIT Bhubaneswar</p>
+                            <p className="text-sm text-[#777777]">IIIT Bhubaneswar</p>
                         </div>
                         <div className="text-center">
                             <h3 className="text-xl font-bold text-[#333333] mb-1">Status</h3>
