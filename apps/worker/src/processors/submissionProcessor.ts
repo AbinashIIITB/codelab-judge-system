@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Socket } from 'socket.io-client';
 import { Language, Verdict, SubmissionStatus, TestCase, TestCaseResult } from '@codelab/shared';
 import { DockerExecutor } from '../executor/DockerExecutor';
+import { PistonExecutor } from '../executor/PistonExecutor';
 import { compareOutput } from '../utils/compareOutput';
 
 // Submission model (duplicated to avoid circular dependency)
@@ -58,10 +59,6 @@ interface SubmissionJob {
     language: Language;
     userId: string;
 }
-
-import { DockerExecutor } from '../executor/DockerExecutor';
-import { PistonExecutor } from '../executor/PistonExecutor';
-import { compareOutput } from '../utils/compareOutput';
 
 const EXECUTOR_TYPE = process.env.EXECUTOR_TYPE || 'docker';
 

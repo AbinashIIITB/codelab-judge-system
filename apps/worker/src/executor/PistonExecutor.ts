@@ -1,7 +1,22 @@
 import axios from 'axios';
-import { Language, ExecutionRequest, ExecutionResult } from '@codelab/shared';
+import { Language } from '@codelab/shared';
 
 const PISTON_URL = process.env.PISTON_URL || 'https://emkc.org/api/v2/piston/execute';
+
+interface ExecutionRequest {
+    code: string;
+    language: Language;
+    input: string;
+    timeLimit?: number;
+    memoryLimit?: number;
+}
+
+interface ExecutionResult {
+    output: string;
+    error?: string;
+    runtime: number;
+    memory: number;
+}
 
 const LANGUAGE_MAP: Record<Language, { language: string, version: string }> = {
     cpp: { language: 'cpp', version: '10.2.0' },
@@ -48,7 +63,7 @@ export class PistonExecutor {
                     return {
                         output: '',
                         error: 'Time Limit Exceeded',
-                        runtime: request.timeLimit,
+                        runtime: request.timeLimit ?? 3000,
                         memory: 0,
                     };
                 }

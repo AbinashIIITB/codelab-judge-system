@@ -5,6 +5,7 @@
     "main": "dist/worker.js",
     "scripts": {
         "dev": "tsx watch src/worker.ts",
+        "prebuild": "cd ../.. && npm run build --workspace=@codelab/shared",
         "build": "tsc",
         "start": "node dist/worker.js",
         "lint": "eslint src/",

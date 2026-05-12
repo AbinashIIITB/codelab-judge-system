@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:shared": "npm run build --workspace=@codelab/shared",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "dev:web": "npm run dev --workspace=@codelab/web",

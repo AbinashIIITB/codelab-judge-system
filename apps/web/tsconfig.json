@@ -24,6 +24,9 @@
         "paths": {
             "@/*": [
                 "./*"
+            ],
+            "@codelab/shared": [
+                "../../packages/shared/src/index.ts"
             ]
         }
     },
@@ -31,7 +34,8 @@
         "next-env.d.ts",
         "**/*.ts",
         "**/*.tsx",
-        ".next/types/**/*.ts"
+        ".next/types/**/*.ts",
+        "../../packages/shared/src/**/*.ts"
     ],
     "exclude": [
         "node_modules"
