@@ -14,7 +14,10 @@
         "declaration": true,
         "declarationMap": true,
         "outDir": "./dist",
-        "rootDir": "./src"
+        "rootDir": "./src",
+        "paths": {
+            "@codelab/shared": ["./packages/shared/src"]
+        }
     },
     "exclude": [
         "node_modules",
