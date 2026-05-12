@@ -1,8 +1,5 @@
 FROM node:20-alpine AS base
 
-# Install Docker CLI for spawning containers
-RUN apk add --no-cache docker-cli
-
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
