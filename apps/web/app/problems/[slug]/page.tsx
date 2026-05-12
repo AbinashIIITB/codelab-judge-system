@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ProblemDescription } from '@/components/problems/ProblemDescription';
 import { Console } from '@/components/editor/Console';
 import { problemsApi, submissionsApi } from '@/lib/api';
-import { connectSocket, onSubmissionStatus, SubmissionStatusUpdate } from '@/lib/socket';
+import { connectSocket, onSubmissionStatus, SubmissionStatusUpdate, joinSubmissionRoom } from '@/lib/socket';
 import { LANGUAGE_CONFIG, STARTER_CODE, Language } from '@codelab/shared';
 
 // Dynamic import for Monaco Editor (client-side only)
@@ -33,6 +35,7 @@ interface Problem {
     memoryLimit: number;
     tags: string[];
     starterCode: Record<string, string>;
+    solutions?: Record<string, string>;
 }
 
 interface ConsoleOutput {
@@ -60,6 +63,7 @@ export default function ProblemPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [consoleOutput, setConsoleOutput] = useState<ConsoleOutput[]>([]);
     const [showConsole, setShowConsole] = useState(false);
+    const [showSolution, setShowSolution] = useState(false);
     const [submissionId, setSubmissionId] = useState<string | null>(null);
 
     // Fetch problem data
@@ -215,6 +219,7 @@ You may assume that each input would have **exactly one solution**, and you may 
             });
 
             setSubmissionId(result.submissionId);
+            joinSubmissionRoom(result.submissionId);
             addConsoleOutput('info', `Submission ID: ${result.submissionId}`);
         } catch (error) {
             addConsoleOutput('error', `Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -266,6 +271,49 @@ You may assume that each input would have **exactly one solution**, and you may 
                             timeLimit={problem.timeLimit}
                             memoryLimit={problem.memoryLimit}
                         />
+
+                        {/* Solution Section */}
+                        <div className="mt-8 pt-8 border-t border-[#CCCCCC]">
+                            {!showSolution ? (
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('Are you sure you want to see the solution? Try to solve it yourself first!')) {
+                                            setShowSolution(true);
+                                        }
+                                    }}
+                                    className="text-[#0056b3] font-bold hover:underline flex items-center gap-1"
+                                >
+                                    [+] Show Solution
+                                </button>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h3 className="font-bold text-[#0056b3]">Solution ({language.toUpperCase()})</h3>
+                                        <button
+                                            onClick={() => setShowSolution(false)}
+                                            className="text-xs text-gray-500 hover:underline"
+                                        >
+                                            Hide Solution
+                                        </button>
+                                    </div>
+                                    {problem.solutions?.[language] ? (
+                                        <div className="border border-[#CCCCCC] rounded overflow-hidden">
+                                            <SyntaxHighlighter
+                                                language={LANGUAGE_CONFIG[language].monacoLanguage}
+                                                style={oneDark}
+                                                customStyle={{ margin: 0, fontSize: '12px' }}
+                                            >
+                                                {problem.solutions[language]}
+                                            </SyntaxHighlighter>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 bg-[#F8F8F8] border border-[#CCCCCC] text-gray-500 text-xs italic">
+                                            No solution available for this language yet.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Editor Section */}

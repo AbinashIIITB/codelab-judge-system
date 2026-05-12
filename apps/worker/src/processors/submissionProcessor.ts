@@ -59,12 +59,18 @@ interface SubmissionJob {
     userId: string;
 }
 
+import { DockerExecutor } from '../executor/DockerExecutor';
+import { PistonExecutor } from '../executor/PistonExecutor';
+import { compareOutput } from '../utils/compareOutput';
+
+const EXECUTOR_TYPE = process.env.EXECUTOR_TYPE || 'docker';
+
 export async function processSubmission(
     job: SubmissionJob,
     socket: Socket
 ): Promise<void> {
     const { submissionId, problemSlug, code, language, userId } = job;
-    const executor = new DockerExecutor();
+    const executor = EXECUTOR_TYPE === 'piston' ? new PistonExecutor() : new DockerExecutor();
 
     try {
         // Update status to compiling
@@ -105,6 +111,13 @@ export async function processSubmission(
                 });
 
                 const passed = compareOutput(result.output, testCase.expectedOutput);
+
+                console.log(`Test Case ${i + 1}: ${passed ? 'PASSED' : 'FAILED'}`);
+                if (!passed) {
+                    console.log(`  Input: ${testCase.input.replace(/\n/g, '\\n')}`);
+                    console.log(`  Expected: "${testCase.expectedOutput.replace(/\n/g, '\\n')}"`);
+                    console.log(`  Actual:   "${result.output.replace(/\n/g, '\\n')}"`);
+                }
 
                 results.push({
                     passed,

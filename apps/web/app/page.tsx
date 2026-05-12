@@ -51,7 +51,7 @@ export default function HomePage() {
 
                 <div className="container mx-auto px-4">
                     <div className="text-center max-w-4xl mx-auto">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-sm mb-6">
+                        <div className="inline-flex items-center gap-2 text-primary text-sm mb-6">
                             <Code2 className="h-4 w-4" />
                             <span>Built with Next.js, Docker, Monorepo, & Microservices</span>
                         </div>
@@ -120,9 +120,6 @@ export default function HomePage() {
                         {features.map((feature, index) => (
                             <Card key={index} className="relative overflow-hidden group hover:border-primary/50 transition-colors">
                                 <CardContent className="p-6">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                                        <feature.icon className="h-6 w-6" />
-                                    </div>
                                     <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
                                     <p className="text-muted-foreground text-sm">{feature.description}</p>
                                 </CardContent>
@@ -161,9 +158,6 @@ export default function HomePage() {
                             <span className="font-semibold">CodeLab</span>
                         </div>
                         <div className="flex flex-col text-right">
-                            <div className="text-sm text-muted-foreground">
-                                © {new Date().getFullYear()} CodeLab. All rights reserved.
-                            </div>
                             <div className="text-xs text-muted-foreground mt-1">
                                 Project by <span className="font-semibold text-[#333333]">Abinash Mohanty</span> • <span className="font-semibold text-[#333333]">IIIT Bhubaneswar</span>
                             </div>

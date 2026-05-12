@@ -35,6 +35,10 @@ ENV NODE_ENV=production
 COPY --from=builder /app/apps/worker/dist ./dist
 COPY --from=builder /app/apps/worker/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
+# Copy shared package so the node_modules/@codelab/shared symlink resolves correctly
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/src ./packages/shared/src
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
 
 EXPOSE 4001
 

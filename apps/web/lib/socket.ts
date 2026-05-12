@@ -73,3 +73,8 @@ export function joinLeaderboardRoom(): void {
     const sock = getSocket();
     sock.emit('join:leaderboard');
 }
+
+export function joinSubmissionRoom(submissionId: string): void {
+    const sock = getSocket();
+    sock.emit('join:submission', submissionId);
+}

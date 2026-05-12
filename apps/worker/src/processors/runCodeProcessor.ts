@@ -1,6 +1,9 @@
 import { Language, TestCase } from '@codelab/shared';
 import { DockerExecutor } from '../executor/DockerExecutor';
+import { PistonExecutor } from '../executor/PistonExecutor';
 import { compareOutput } from '../utils/compareOutput';
+
+const EXECUTOR_TYPE = process.env.EXECUTOR_TYPE || 'docker';
 
 interface RunCodeJob {
     problemSlug: string;
@@ -27,7 +30,7 @@ interface RunCodeResult {
 
 export async function processRunCode(job: RunCodeJob): Promise<RunCodeResult> {
     const { code, language, customInput, testCases, timeLimit, memoryLimit } = job;
-    const executor = new DockerExecutor();
+    const executor = EXECUTOR_TYPE === 'piston' ? new PistonExecutor() : new DockerExecutor();
 
     // If custom input is provided, just run the code and return output
     if (customInput !== undefined) {

@@ -33,6 +33,7 @@ export interface Problem {
     memoryLimit: number;        // in MB
     tags: string[];
     starterCode: Record<Language, string>;
+    solutions?: Partial<Record<Language, string>>;
     createdAt: Date;
     updatedAt: Date;
 }

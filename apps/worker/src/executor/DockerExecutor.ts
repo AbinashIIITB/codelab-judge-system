@@ -21,139 +21,144 @@ export class DockerExecutor {
     private docker: Docker;
 
     constructor() {
-        this.docker = new Docker({
-            socketPath: process.env.DOCKER_HOST || '/var/run/docker.sock',
-        });
+        let socketPath = process.env.DOCKER_HOST || '/var/run/docker.sock';
+        // Remove unix:// prefix if present
+        if (socketPath.startsWith('unix://')) {
+            socketPath = socketPath.replace('unix://', '');
+        }
+        
+        this.docker = new Docker({ socketPath });
     }
 
     async execute(request: ExecutionRequest): Promise<ExecutionResult> {
         const { code, language, input, timeLimit, memoryLimit } = request;
         const config = LANGUAGE_CONFIG[language];
 
-        const startTime = Date.now();
-        let stdout = '';
-        let stderr = '';
-
         try {
-            // Create a temporary container
             const container = await this.docker.createContainer({
                 Image: config.dockerImage,
-                Cmd: ['/bin/sh', '-c', this.getExecutionScript(language, code)],
+                Cmd: ['/bin/sh', '-c', 'sleep 3600'],
                 Tty: false,
-                OpenStdin: true,
-                StdinOnce: true,
-                NetworkDisabled: true, // No network access
+                NetworkDisabled: true,
                 HostConfig: {
-                    Memory: memoryLimit * 1024 * 1024, // Convert to bytes
-                    MemorySwap: memoryLimit * 1024 * 1024, // Same as memory (no swap)
+                    Memory: memoryLimit * 1024 * 1024,
+                    MemorySwap: memoryLimit * 1024 * 1024,
                     CpuPeriod: 100000,
-                    CpuQuota: 50000, // 50% CPU
-                    PidsLimit: 64, // Limit number of processes
+                    CpuQuota: 50000,
+                    PidsLimit: 64,
                     NetworkMode: 'none',
-                    SecurityOpt: ['no-new-privileges'],
-                    ReadonlyRootfs: false,
                 },
             });
 
-            // Start container
             await container.start();
 
-            // Attach to container for stdin/stdout
-            const stream = await container.attach({
-                stream: true,
-                stdin: true,
-                stdout: true,
-                stderr: true,
-            });
-
-            // Collect stdout and stderr
-            const stdoutStream = new StringWritable();
-            const stderrStream = new StringWritable();
-
-            this.docker.modem.demuxStream(stream, stdoutStream, stderrStream);
-
-            // Send input
-            stream.write(input);
-            stream.end();
-
-            // Wait for container with timeout
-            const waitPromise = container.wait();
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('Time Limit Exceeded')), timeLimit + 1000);
-            });
-
             try {
-                await Promise.race([waitPromise, timeoutPromise]);
-            } catch (error) {
-                // Kill container on timeout
-                try {
-                    await container.kill();
-                } catch {
-                    // Container might already be stopped
+                // 1. Write code and input using streams (much safer than echo)
+                await this.writeFileInContainer(container, 'solution_source', code);
+                await this.writeFileInContainer(container, 'input.txt', input);
+
+                // 2. Prepare and Compile
+                if (config.compileCommand) {
+                    const sourceFile = language === 'java' ? 'Solution.java' : (language === 'cpp' ? 'solution.cpp' : 'solution_source');
+                    await this.execInContainer(container, ['/bin/sh', '-c', `cp solution_source ${sourceFile}`]);
+
+                    const compileResult = await this.execInContainer(container, ['/bin/sh', '-c', `${config.compileCommand} 2>&1`]);
+                    if (compileResult.exitCode !== 0) {
+                        return {
+                            output: '',
+                            error: `Compilation Error:\n${compileResult.output}`,
+                            runtime: 0,
+                            memory: 0,
+                        };
+                    }
+                } else {
+                    const filename = language === 'python' ? 'solution.py' : 'solution.js';
+                    await this.execInContainer(container, ['/bin/sh', '-c', `cp solution_source ${filename}`]);
                 }
 
-                await container.remove({ force: true });
+                // 3. Execute with time limit
+                const startTime = Date.now();
+                const runResult = await this.execInContainer(container, ['/bin/sh', '-c', `${config.runCommand} < input.txt`], timeLimit);
+                const runtime = Date.now() - startTime;
+
+                if (runResult.timeout) {
+                    return { output: '', error: 'Time Limit Exceeded', runtime: timeLimit, memory: 0 };
+                }
 
                 return {
-                    output: '',
-                    error: 'Time Limit Exceeded',
-                    runtime: timeLimit,
-                    memory: 0,
-                };
-            }
-
-            // Get output
-            stdout = stdoutStream.toString();
-            stderr = stderrStream.toString();
-
-            // Get container stats for memory usage
-            const stats = await container.inspect();
-            const memoryUsed = stats.State.OOMKilled
-                ? memoryLimit
-                : Math.round(memoryLimit * 0.5); // Approximate since we can't get exact memory post-exit
-
-            // Clean up container
-            await container.remove({ force: true });
-
-            const runtime = Date.now() - startTime;
-
-            if (stderr && !stdout) {
-                return {
-                    output: '',
-                    error: stderr.trim(),
+                    output: runResult.stdout, // Keep raw for comparison, trimmer handles it
+                    error: runResult.stderr || undefined,
                     runtime,
-                    memory: memoryUsed,
+                    memory: Math.round(memoryLimit * 0.1),
                 };
-            }
 
-            return {
-                output: stdout.trim(),
-                error: stderr ? stderr.trim() : undefined,
-                runtime,
-                memory: memoryUsed,
-            };
+            } finally {
+                await container.remove({ force: true });
+            }
 
         } catch (error) {
-            const runtime = Date.now() - startTime;
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            return { output: '', error: errorMessage, runtime: 0, memory: 0 };
+        }
+    }
 
-            // Check if it's a Docker image not found error
-            if (errorMessage.includes('No such image')) {
-                return {
-                    output: '',
-                    error: `Docker image ${config.dockerImage} not found. Run: docker build -t ${config.dockerImage} docker/images/`,
-                    runtime,
-                    memory: 0,
-                };
+    private async writeFileInContainer(container: any, filename: string, content: string): Promise<void> {
+        const exec = await container.exec({
+            Cmd: ['/bin/sh', '-c', `cat > ${filename}`],
+            AttachStdin: true,
+            Tty: false
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: true });
+        stream.write(content);
+        stream.end();
+
+        return new Promise((resolve, reject) => {
+            stream.on('end', resolve);
+            stream.on('error', reject);
+        });
+    }
+
+    private async execInContainer(container: any, cmd: string[], timeout?: number): Promise<{ stdout: string, stderr: string, output: string, exitCode: number, timeout?: boolean }> {
+        const exec = await container.exec({
+            Cmd: cmd,
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start();
+        
+        const stdoutStream = new StringWritable();
+        const stderrStream = new StringWritable();
+        this.docker.modem.demuxStream(stream, stdoutStream, stderrStream);
+
+        return new Promise((resolve) => {
+            let isDone = false;
+            let timer: NodeJS.Timeout;
+
+            if (timeout) {
+                timer = setTimeout(async () => {
+                    if (!isDone) {
+                        isDone = true;
+                        resolve({ stdout: '', stderr: '', output: '', exitCode: 1, timeout: true });
+                    }
+                }, timeout);
             }
 
-            return {
-                output: '',
-                error: errorMessage,
-                runtime,
-                memory: 0,
-            };
-        }
+            stream.on('end', async () => {
+                if (isDone) return;
+                isDone = true;
+                if (timer) clearTimeout(timer);
+
+                const inspect = await exec.inspect();
+                resolve({
+                    stdout: stdoutStream.toString(),
+                    stderr: stderrStream.toString(),
+                    output: stdoutStream.toString() + stderrStream.toString(),
+                    exitCode: inspect.ExitCode
+                });
+            });
+        });
     }
 
     private getExecutionScript(language: Language, code: string): string {

@@ -1,9 +1,10 @@
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jdk-jammy
 
 WORKDIR /app
 
-# Create non-root user for security
-RUN useradd -m -s /bin/bash runner
+# Create non-root user and set permissions
+RUN useradd -m -s /bin/bash runner && \
+    chown -R runner:runner /app
 USER runner
 
 CMD ["/bin/bash"]

@@ -60,6 +60,117 @@ Output: [0,1]
         timeLimit: 2000,
         memoryLimit: 256,
         starterCode: STARTER_CODE,
+        solutions: {
+            cpp: `#include <iostream>
+#include <vector>
+#include <unordered_map>
+using namespace std;
+
+int main() {
+    int n;
+    if (!(cin >> n)) return 0;
+    
+    vector<int> nums(n);
+    for (int i = 0; i < n; i++) {
+        cin >> nums[i];
+    }
+    
+    int target;
+    cin >> target;
+    
+    unordered_map<int, int> mp;
+    for (int i = 0; i < n; i++) {
+        int complement = target - nums[i];
+        if (mp.find(complement) != mp.end()) {
+            cout << mp[complement] << " " << i;
+            return 0;
+        }
+        mp[nums[i]] = i;
+    }
+    
+    return 0;
+}`,
+            python: `import sys
+
+def solve():
+    input_data = sys.stdin.read().split()
+    if not input_data:
+        return
+        
+    n = int(input_data[0])
+    nums = [int(x) for x in input_data[1:n+1]]
+    target = int(input_data[n+1])
+    
+    prevMap = {} # val : index
+    
+    for i, n in enumerate(nums):
+        diff = target - n
+        if diff in prevMap:
+            print(f"{prevMap[diff]} {i}")
+            return
+        prevMap[n] = i
+
+if __name__ == "__main__":
+    solve()`,
+            java: `import java.util.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNextInt()) return;
+        
+        int n = sc.nextInt();
+        int[] nums = new int[n];
+        for (int i = 0; i < n; i++) {
+            nums[i] = sc.nextInt();
+        }
+        
+        int target = sc.nextInt();
+        Map<Integer, Integer> prevMap = new HashMap<>();
+        
+        for (int i = 0; i < n; i++) {
+            int diff = target - nums[i];
+            if (prevMap.containsKey(diff)) {
+                System.out.println(prevMap.get(diff) + " " + i);
+                return;
+            }
+            prevMap.put(nums[i], i);
+        }
+        
+        sc.close();
+    }
+}`,
+            javascript: `const readline = require('readline');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false
+});
+
+let input = '';
+rl.on('line', (line) => {
+    input += line + ' ';
+});
+
+rl.on('close', () => {
+    const data = input.trim().split(/\\s+/).map(Number);
+    if (data.length < 2) return;
+    
+    const n = data[0];
+    const nums = data.slice(1, n + 1);
+    const target = data[n + 1];
+    
+    const prevMap = new Map();
+    for (let i = 0; i < n; i++) {
+        const diff = target - nums[i];
+        if (prevMap.has(diff)) {
+            console.log(\`\${prevMap.get(diff)} \${i}\`);
+            return;
+        }
+        prevMap.set(nums[i], i);
+    }
+});`
+        },
     },
     {
         slug: 'reverse-linked-list',
@@ -115,6 +226,69 @@ Print the reversed list as space-separated values.`,
         timeLimit: 2000,
         memoryLimit: 256,
         starterCode: STARTER_CODE,
+        solutions: {
+            cpp: `#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int main() {
+    int n;
+    if (!(cin >> n)) return 0;
+    if (n == 0) return 0;
+    
+    vector<int> nums(n);
+    for (int i = 0; i < n; i++) cin >> nums[i];
+    
+    for (int i = n - 1; i >= 0; i--) {
+        cout << nums[i] << (i == 0 ? "" : " ");
+    }
+    return 0;
+}`,
+            python: `import sys
+
+def solve():
+    input_data = sys.stdin.read().split()
+    if not input_data: return
+    
+    n = int(input_data[0])
+    if n == 0: return
+    
+    nums = input_data[1:n+1]
+    print(" ".join(nums[::-1]))
+
+if __name__ == "__main__":
+    solve()`,
+            java: `import java.util.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNextInt()) return;
+        
+        int n = sc.nextInt();
+        int[] nums = new int[n];
+        for (int i = 0; i < n; i++) nums[i] = sc.nextInt();
+        
+        for (int i = n - 1; i >= 0; i--) {
+            System.out.print(nums[i] + (i == 0 ? "" : " "));
+        }
+    }
+}`,
+            javascript: `const readline = require('readline');
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
+
+let input = '';
+rl.on('line', (line) => input += line + ' ');
+rl.on('close', () => {
+    const data = input.trim().split(/\\s+/).map(Number);
+    if (data.length < 1) return;
+    const n = data[0];
+    if (n === 0) return;
+    const nums = data.slice(1, n + 1);
+    console.log(nums.reverse().join(' '));
+});`
+        },
     },
     {
         slug: 'valid-parentheses',
@@ -177,6 +351,107 @@ Print \`true\` if valid, \`false\` otherwise.`,
         timeLimit: 2000,
         memoryLimit: 256,
         starterCode: STARTER_CODE,
+        solutions: {
+            cpp: `#include <iostream>
+#include <string>
+#include <stack>
+#include <unordered_map>
+using namespace std;
+
+bool isValid(string s) {
+    stack<char> st;
+    unordered_map<char, char> mapping = {{')', '('}, {'}', '{'}, {']', '['}};
+    
+    for (char c : s) {
+        if (mapping.find(c) != mapping.end()) {
+            char top = st.empty() ? '#' : st.top();
+            if (top != mapping[c]) return false;
+            st.pop();
+        } else {
+            st.push(c);
+        }
+    }
+    return st.empty();
+}
+
+int main() {
+    string s;
+    if (!(cin >> s)) return 0;
+    cout << (isValid(s) ? "true" : "false");
+    return 0;
+}`,
+            python: `import sys
+
+def isValid(s):
+    stack = []
+    mapping = {")": "(", "}": "{", "]": "["}
+    for char in s:
+        if char in mapping:
+            top_element = stack.pop() if stack else '#'
+            if mapping[char] != top_element:
+                return False
+        else:
+            stack.append(char)
+    return not stack
+
+if __name__ == "__main__":
+    line = sys.stdin.read().strip()
+    if not line:
+        sys.exit(0)
+    print("true" if isValid(line) else "false")`,
+            java: `import java.util.*;
+
+public class Solution {
+    public static boolean isValid(String s) {
+        Stack<Character> stack = new Stack<>();
+        Map<Character, Character> mapping = new HashMap<>();
+        mapping.put(')', '(');
+        mapping.put('}', '{');
+        mapping.put(']', '[');
+        
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (mapping.containsKey(c)) {
+                char topElement = stack.empty() ? '#' : stack.pop();
+                if (topElement != mapping.get(c)) return false;
+            } else {
+                stack.push(c);
+            }
+        }
+        return stack.isEmpty();
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNext()) return;
+        String s = sc.next();
+        System.out.print(isValid(s) ? "true" : "false");
+    }
+}`,
+            javascript: `const readline = require('readline');
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
+
+rl.on('line', (line) => {
+    const s = line.trim();
+    if (!s) return;
+    
+    const isValid = (s) => {
+        const stack = [];
+        const mapping = { ')': '(', '}': '{', ']': '[' };
+        for (let char of s) {
+            if (mapping[char]) {
+                const top = stack.pop() || '#';
+                if (top !== mapping[char]) return false;
+            } else {
+                stack.push(char);
+            }
+        }
+        return stack.length === 0;
+    };
+    
+    process.stdout.write(isValid(s) ? "true" : "false");
+});`
+        },
     },
     {
         slug: 'merge-two-sorted-lists',
@@ -239,6 +514,104 @@ Print the merged sorted list as space-separated values.`,
         timeLimit: 2000,
         memoryLimit: 256,
         starterCode: STARTER_CODE,
+        solutions: {
+            cpp: `#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int main() {
+    int n, m;
+    if (!(cin >> n)) return 0;
+    vector<int> l1(n);
+    for (int i = 0; i < n; i++) cin >> l1[i];
+    
+    if (!(cin >> m)) return 0;
+    vector<int> l2(m);
+    for (int i = 0; i < m; i++) cin >> l2[i];
+    
+    vector<int> res;
+    int i = 0, j = 0;
+    while (i < n && j < m) {
+        if (l1[i] < l2[j]) res.push_back(l1[i++]);
+        else res.push_back(l2[j++]);
+    }
+    while (i < n) res.push_back(l1[i++]);
+    while (j < m) res.push_back(l2[j++]);
+    
+    for (int k = 0; k < res.size(); k++) {
+        cout << res[k] << (k == res.size() - 1 ? "" : " ");
+    }
+    return 0;
+}`,
+            python: `import sys
+
+def solve():
+    input_data = sys.stdin.read().split()
+    if not input_data: return
+    
+    ptr = 0
+    n = int(input_data[ptr])
+    ptr += 1
+    l1 = [int(x) for x in input_data[ptr:ptr+n]]
+    ptr += n
+    
+    m = int(input_data[ptr])
+    ptr += 1
+    l2 = [int(x) for x in input_data[ptr:ptr+m]]
+    
+    res = sorted(l1 + l2)
+    print(" ".join(map(str, res)))
+
+if __name__ == "__main__":
+    solve()`,
+            java: `import java.util.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNextInt()) return;
+        
+        int n = sc.nextInt();
+        int[] l1 = new int[n];
+        for (int i = 0; i < n; i++) l1[i] = sc.nextInt();
+        
+        if (!sc.hasNextInt()) return;
+        int m = sc.nextInt();
+        int[] l2 = new int[m];
+        for (int i = 0; i < m; i++) l2[i] = sc.nextInt();
+        
+        List<Integer> res = new ArrayList<>();
+        for (int x : l1) res.add(x);
+        for (int x : l2) res.add(x);
+        Collections.sort(res);
+        
+        for (int i = 0; i < res.size(); i++) {
+            System.out.print(res.get(i) + (i == res.size() - 1 ? "" : " "));
+        }
+    }
+}`,
+            javascript: `const readline = require('readline');
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
+
+let input = '';
+rl.on('line', (line) => input += line + ' ');
+rl.on('close', () => {
+    const data = input.trim().split(/\\s+/).map(Number);
+    if (data.length < 1) return;
+    
+    let ptr = 0;
+    const n = data[ptr++];
+    const l1 = data.slice(ptr, ptr + n);
+    ptr += n;
+    
+    const m = data[ptr++];
+    const l2 = data.slice(ptr, ptr + m);
+    
+    const res = [...l1, ...l2].sort((a, b) => a - b);
+    console.log(res.join(' '));
+});`
+        },
     },
     {
         slug: 'best-time-to-buy-and-sell-stock',
@@ -295,6 +668,107 @@ Print the maximum profit.`,
         timeLimit: 2000,
         memoryLimit: 256,
         starterCode: STARTER_CODE,
+        solutions: {
+            cpp: `#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int main() {
+    int n;
+    if (!(cin >> n)) return 0;
+    vector<int> prices(n);
+    for (int i = 0; i < n; i++) cin >> prices[i];
+    
+    if (n == 0) {
+        cout << 0;
+        return 0;
+    }
+    
+    int minPrice = 1e9;
+    int maxProfit = 0;
+    for (int price : prices) {
+        minPrice = min(minPrice, price);
+        maxProfit = max(maxProfit, price - minPrice);
+    }
+    cout << maxProfit;
+    return 0;
+}`,
+            python: `import sys
+
+def solve():
+    input_data = sys.stdin.read().split()
+    if not input_data: return
+    
+    n = int(input_data[0])
+    prices = [int(x) for x in input_data[1:n+1]]
+    
+    if not prices:
+        print(0)
+        return
+        
+    min_price = float('inf')
+    max_profit = 0
+    for price in prices:
+        if price < min_price:
+            min_price = price
+        elif price - min_price > max_profit:
+            max_profit = price - min_price
+    print(max_profit)
+
+if __name__ == "__main__":
+    solve()`,
+            java: `import java.util.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNextInt()) return;
+        
+        int n = sc.nextInt();
+        int[] prices = new int[n];
+        for (int i = 0; i < n; i++) prices[i] = sc.nextInt();
+        
+        if (n == 0) {
+            System.out.print(0);
+            return;
+        }
+        
+        int minPrice = Integer.MAX_VALUE;
+        int maxProfit = 0;
+        for (int price : prices) {
+            if (price < minPrice) minPrice = price;
+            else if (price - minPrice > maxProfit) maxProfit = price - minPrice;
+        }
+        System.out.print(maxProfit);
+    }
+}`,
+            javascript: `const readline = require('readline');
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
+
+let input = '';
+rl.on('line', (line) => input += line + ' ');
+rl.on('close', () => {
+    const data = input.trim().split(/\\s+/).map(Number);
+    if (data.length < 1) return;
+    
+    const n = data[0];
+    const prices = data.slice(1, n + 1);
+    
+    if (prices.length === 0) {
+        console.log(0);
+        return;
+    }
+    
+    let minPrice = Infinity;
+    let maxProfit = 0;
+    for (let price of prices) {
+        if (price < minPrice) minPrice = price;
+        else if (price - minPrice > maxProfit) maxProfit = price - minPrice;
+    }
+    process.stdout.write(maxProfit.toString());
+});`
+        },
     },
 ];
 

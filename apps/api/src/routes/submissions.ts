@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { Server } from 'socket.io';
 import { Submission, Problem } from '../models';
 import { getSubmissionQueue, getRunCodeQueue } from '../config/redis';
+import { QueueEvents } from 'bullmq';
 import { SubmitRequest, RunCodeRequest, Language } from '@codelab/shared';
 
 const router = Router();
@@ -106,7 +107,8 @@ router.post('/run', async (req: Request, res: Response) => {
         });
 
         // Wait for result (with timeout)
-        const result = await job.waitUntilFinished(queue.events, 30000);
+        const queueEvents = new QueueEvents(queue.name, { connection: queue.opts.connection });
+        const result = await job.waitUntilFinished(queueEvents, 30000);
 
         res.json(result);
     } catch (error) {

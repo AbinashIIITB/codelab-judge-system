@@ -8,7 +8,7 @@ export function Navbar() {
             <div className="flex items-center space-x-6 container mx-auto max-w-[1200px]">
                 {/* Logo/Brand */}
                 <Link href="/" className="text-white font-bold hover:text-gray-300 transition-colors uppercase tracking-tight">
-                    CodeLab
+                    {"</>"} CodeLab
                 </Link>
 
                 {/* Desktop Navigation */}

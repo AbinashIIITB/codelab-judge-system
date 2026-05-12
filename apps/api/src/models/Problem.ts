@@ -4,8 +4,8 @@ import { Problem as IProblem, TestCase, Difficulty, Language, STARTER_CODE } fro
 export interface ProblemDocument extends Omit<IProblem, 'id'>, Document { }
 
 const TestCaseSchema = new Schema<TestCase>({
-    input: { type: String, required: true },
-    expectedOutput: { type: String, required: true },
+    input: { type: String, default: '' },
+    expectedOutput: { type: String, default: '' },
     isHidden: { type: Boolean, default: false },
 }, { _id: false });
 
@@ -53,12 +53,17 @@ const ProblemSchema = new Schema<ProblemDocument>({
         type: Map,
         of: String,
         default: () => new Map(Object.entries(STARTER_CODE)),
-    },
+    } as any,
+    solutions: {
+        type: Map,
+        of: String,
+        default: () => new Map(),
+    } as any,
 }, {
     timestamps: true,
     toJSON: {
         virtuals: true,
-        transform: (_, ret) => {
+        transform: (_, ret: any) => {
             ret.id = ret._id.toString();
             delete ret._id;
             delete ret.__v;

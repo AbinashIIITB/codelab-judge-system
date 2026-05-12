@@ -16,6 +16,12 @@ export function setupSocketHandlers(io: Server): void {
             console.log(`Client joined problem room: ${problemSlug}`);
         });
 
+        // Join specific submission room
+        socket.on('join:submission', (submissionId: string) => {
+            socket.join(`submission:${submissionId}`);
+            console.log(`Client joined submission room: ${submissionId}`);
+        });
+
         // Leave problem room
         socket.on('leave:problem', (problemSlug: string) => {
             socket.leave(`problem:${problemSlug}`);
@@ -29,6 +35,19 @@ export function setupSocketHandlers(io: Server): void {
 
         socket.on('disconnect', () => {
             console.log(`Client disconnected: ${socket.id}`);
+        });
+
+        // Bridge for Worker updates to Clients
+        socket.on('worker:submission:status', (data) => {
+            const { userId, submissionId, ...update } = data;
+            
+            // Forward to user-specific room
+            if (userId) {
+                io.to(`user:${userId}`).emit('submission:status', { submissionId, ...update });
+            }
+            
+            // Also broadcast to a specific submission room (useful for guest submissions)
+            io.to(`submission:${submissionId}`).emit('submission:status', { submissionId, ...update });
         });
     });
 }
