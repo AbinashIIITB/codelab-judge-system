@@ -18,21 +18,25 @@ const app = express();
 const server = http.createServer(app);
 
 // Socket.IO setup
+// Middleware
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+app.use(cors({
+    origin: corsOrigin === '*' ? true : corsOrigin,
+    credentials: true,
+}));
+
+// Socket.IO setup
 const io = new Server(server, {
     cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: corsOrigin === '*' ? true : corsOrigin,
         methods: ['GET', 'POST'],
+        credentials: true,
     },
 });
 
 // Make io accessible to routes
 app.set('io', io);
-
-// Middleware
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-}));
 app.use(express.json());
 
 // Health check
