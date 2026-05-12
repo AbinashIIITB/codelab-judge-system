@@ -1,4 +1,9 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Ensure URL starts with http/https to prevent relative path issues
+if (API_URL && !API_URL.startsWith('http')) {
+    API_URL = `https://${API_URL}`;
+}
 
 interface FetchOptions extends RequestInit {
     params?: Record<string, string>;
@@ -7,7 +12,9 @@ interface FetchOptions extends RequestInit {
 async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
     const { params, ...fetchOptions } = options;
 
-    let url = `${API_URL}/api${endpoint}`;
+    // Remove any double slashes and ensure /api prefix
+    const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+    let url = `${baseUrl}/api${endpoint}`;
 
     if (params) {
         const searchParams = new URLSearchParams(params);

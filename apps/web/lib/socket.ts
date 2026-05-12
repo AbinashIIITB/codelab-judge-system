@@ -2,7 +2,12 @@
 
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
+let WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
+
+// Ensure URL starts with http/https or ws/wss to prevent relative path issues
+if (WS_URL && !WS_URL.startsWith('http') && !WS_URL.startsWith('ws')) {
+    WS_URL = `https://${WS_URL}`;
+}
 
 let socket: Socket | null = null;
 
