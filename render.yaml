@@ -1,0 +1,67 @@
+# Render Blueprint — free tier, no credit card.
+#
+# Deploy with: https://render.com/deploy?repo=https://github.com/AbinashIIITB/codelab-judge-system
+# Render reads this file and creates every service below in one step.
+#
+# Two things still need doing by hand, because they are not Render resources:
+#   1. MONGODB_URI  — create a free M0 cluster at cloud.mongodb.com and paste
+#                     the connection string (marked sync:false below, so Render
+#                     will prompt for it).
+#   2. PISTON_URL   — the public emkc.org Piston has been whitelist-only since
+#                     2026-02-15. Point this at your own instance. Render's free
+#                     tier cannot run Piston (it needs privileged containers),
+#                     so host it on any box with Docker:
+#                       docker run -d --privileged -p 2000:2000 \
+#                         ghcr.io/engineer-man/piston:latest
+#
+# Free-tier note: free web services sleep after ~15 minutes idle and take a few
+# seconds to wake. The worker is a background service, which Render does not
+# offer for free — run it alongside Piston on the same box, or upgrade.
+
+services:
+  - type: web
+    name: codelab-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build --workspace=@codelab/shared && npm run build --workspace=@codelab/api
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false          # paste your Atlas M0 connection string
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: codelab-redis
+          property: connectionString
+      - key: CORS_ORIGIN
+        sync: false          # e.g. https://codelab-web.onrender.com
+      - key: WORKER_API_KEY
+        generateValue: true  # Render generates a secret; copy it to the worker
+
+  - type: web
+    name: codelab-web
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build --workspace=@codelab/shared && npm run build --workspace=@codelab/web
+    startCommand: npm run start --workspace=@codelab/web
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Inlined into the client bundle at build time, so a change here needs a
+      # rebuild, not just a restart.
+      - key: NEXT_PUBLIC_API_URL
+        sync: false          # e.g. https://codelab-api.onrender.com
+      - key: NEXT_PUBLIC_WS_URL
+        sync: false          # e.g. wss://codelab-api.onrender.com
+
+  - type: keyvalue
+    name: codelab-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction   # BullMQ must not have jobs evicted
+    ipAllowList: []               # internal access only

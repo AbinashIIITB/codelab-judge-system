@@ -3,13 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { ProblemDescription } from '@/components/problems/ProblemDescription';
-import { Console } from '@/components/editor/Console';
 import { problemsApi, submissionsApi } from '@/lib/api';
 import { connectSocket, onSubmissionStatus, SubmissionStatusUpdate, joinSubmissionRoom } from '@/lib/socket';
 import { LANGUAGE_CONFIG, STARTER_CODE, Language } from '@codelab/shared';
@@ -121,7 +117,7 @@ You may assume that each input would have **exactly one solution**, and you may 
 
     // Set up WebSocket connection
     useEffect(() => {
-        const socket = connectSocket();
+        connectSocket();
 
         const unsubscribe = onSubmissionStatus((update: SubmissionStatusUpdate) => {
             if (update.submissionId === submissionId) {

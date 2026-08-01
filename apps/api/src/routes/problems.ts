@@ -98,8 +98,12 @@ router.get('/:slug/testcases', async (req: Request, res: Response) => {
         const { slug } = req.params;
         const apiKey = req.headers['x-api-key'];
 
-        // Simple API key check for internal worker access
-        if (apiKey !== process.env.WORKER_API_KEY) {
+        // Simple API key check for internal worker access.
+        // Guard against an unset WORKER_API_KEY: `undefined !== undefined` is
+        // false, so a request with no header used to pass and leak every hidden
+        // test case. Require the secret to be configured and to match.
+        const expectedKey = process.env.WORKER_API_KEY;
+        if (!expectedKey || typeof apiKey !== 'string' || apiKey !== expectedKey) {
             return res.status(403).json({ error: 'Forbidden' });
         }
 

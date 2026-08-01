@@ -1,7 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { Problem as IProblem, TestCase, Difficulty, Language, STARTER_CODE } from '@codelab/shared';
+import { Problem as IProblem, TestCase, STARTER_CODE } from '@codelab/shared';
 
-export interface ProblemDocument extends Omit<IProblem, 'id'>, Document { }
+// starterCode and solutions are persisted as Mongo Maps, not plain objects.
+// Declaring that here is what lets the schema type-check without `as any`.
+export interface ProblemDocument extends Omit<IProblem, 'id' | 'starterCode' | 'solutions'>, Document {
+    starterCode: Map<string, string>;
+    solutions: Map<string, string>;
+}
 
 const TestCaseSchema = new Schema<TestCase>({
     input: { type: String, default: '' },
@@ -53,18 +58,18 @@ const ProblemSchema = new Schema<ProblemDocument>({
         type: Map,
         of: String,
         default: () => new Map(Object.entries(STARTER_CODE)),
-    } as any,
+    },
     solutions: {
         type: Map,
         of: String,
         default: () => new Map(),
-    } as any,
+    },
 }, {
     timestamps: true,
     toJSON: {
         virtuals: true,
-        transform: (_, ret: any) => {
-            ret.id = ret._id.toString();
+        transform: (_, ret: Record<string, unknown>) => {
+            ret.id = String(ret._id);
             delete ret._id;
             delete ret.__v;
             // Don't expose hidden test cases in regular queries

@@ -53,8 +53,13 @@ Output: [0,1]
         ],
         hiddenTestCases: [
             { input: '2\n3 3\n6', expectedOutput: '0 1', isHidden: true },
-            { input: '5\n1 5 3 7 2\n10', expectedOutput: '1 3', isHidden: true },
-            { input: '6\n-1 -2 -3 4 5 6\n3', expectedOutput: '2 5', isHidden: true },
+            // nums[2] + nums[3] = 3 + 7 = 10. Was '1 3', which sums to 12, so a
+            // correct solution was marked Wrong Answer.
+            { input: '5\n1 5 3 7 2\n10', expectedOutput: '2 3', isHidden: true },
+            // target 11 has exactly one pair (5 + 6). The previous target of 3 had
+            // two — -1+4 and -3+6 — which contradicts the problem's guarantee of a
+            // single answer and made the verdict depend on iteration order.
+            { input: '6\n-1 -2 -3 4 5 6\n11', expectedOutput: '4 5', isHidden: true },
         ],
         tags: ['array', 'hash-table'],
         timeLimit: 2000,

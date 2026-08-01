@@ -102,7 +102,7 @@ export class DockerExecutor {
         }
     }
 
-    private async writeFileInContainer(container: any, filename: string, content: string): Promise<void> {
+    private async writeFileInContainer(container: Docker.Container, filename: string, content: string): Promise<void> {
         const exec = await container.exec({
             Cmd: ['/bin/sh', '-c', `cat > ${filename}`],
             AttachStdin: true,
@@ -119,14 +119,14 @@ export class DockerExecutor {
         });
     }
 
-    private async execInContainer(container: any, cmd: string[], timeout?: number): Promise<{ stdout: string, stderr: string, output: string, exitCode: number, timeout?: boolean }> {
+    private async execInContainer(container: Docker.Container, cmd: string[], timeout?: number): Promise<{ stdout: string, stderr: string, output: string, exitCode: number, timeout?: boolean }> {
         const exec = await container.exec({
             Cmd: cmd,
             AttachStdout: true,
             AttachStderr: true,
         });
 
-        const stream = await exec.start();
+        const stream = await exec.start({});
         
         const stdoutStream = new StringWritable();
         const stderrStream = new StringWritable();
@@ -155,47 +155,12 @@ export class DockerExecutor {
                     stdout: stdoutStream.toString(),
                     stderr: stderrStream.toString(),
                     output: stdoutStream.toString() + stderrStream.toString(),
-                    exitCode: inspect.ExitCode
+                    exitCode: inspect.ExitCode ?? 0
                 });
             });
         });
     }
 
-    private getExecutionScript(language: Language, code: string): string {
-        const config = LANGUAGE_CONFIG[language];
-        const escapedCode = code.replace(/'/g, "'\\''");
-
-        switch (language) {
-            case 'cpp':
-                return `
-          echo '${escapedCode}' > solution.cpp &&
-          g++ -O2 -std=c++17 -o solution solution.cpp 2>&1 &&
-          ./solution
-        `;
-
-            case 'python':
-                return `
-          echo '${escapedCode}' > solution.py &&
-          python3 solution.py
-        `;
-
-            case 'java':
-                return `
-          echo '${escapedCode}' > Solution.java &&
-          javac Solution.java 2>&1 &&
-          java Solution
-        `;
-
-            case 'javascript':
-                return `
-          echo '${escapedCode}' > solution.js &&
-          node solution.js
-        `;
-
-            default:
-                throw new Error(`Unsupported language: ${language}`);
-        }
-    }
 }
 
 // Helper class to collect stream output

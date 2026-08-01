@@ -1,0 +1,2 @@
+# Static assets served at the site root.
+# Tracked so the Docker build COPY step always has a source.

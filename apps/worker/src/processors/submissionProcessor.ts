@@ -1,9 +1,31 @@
 import mongoose from 'mongoose';
 import { Socket } from 'socket.io-client';
-import { Language, Verdict, SubmissionStatus, TestCase, TestCaseResult } from '@codelab/shared';
+import { Language, Verdict, SubmissionStatus, TestCaseResult } from '@codelab/shared';
 import { DockerExecutor } from '../executor/DockerExecutor';
-import { PistonExecutor } from '../executor/PistonExecutor';
+import { PistonExecutor, ExecutionServiceError } from '../executor/PistonExecutor';
 import { compareOutput } from '../utils/compareOutput';
+
+/**
+ * Map an executor failure to a verdict.
+ *
+ * Prefers the structured errorType when the executor supplies one, and falls
+ * back to matching the message so either executor works.
+ */
+function verdictFor(result: { errorType?: string; error?: string }): Verdict {
+    switch (result.errorType) {
+        case 'timeout': return 'Time Limit Exceeded';
+        case 'memory': return 'Memory Limit Exceeded';
+        case 'compilation': return 'Compilation Error';
+        case 'runtime': return 'Runtime Error';
+    }
+
+    const message = result.error;
+    if (!message) return 'Wrong Answer';
+    if (message.includes('Time Limit')) return 'Time Limit Exceeded';
+    if (message.includes('Memory Limit')) return 'Memory Limit Exceeded';
+    if (message.includes('Compilation')) return 'Compilation Error';
+    return 'Runtime Error';
+}
 
 // Submission model (duplicated to avoid circular dependency)
 const SubmissionSchema = new mongoose.Schema({
@@ -132,19 +154,7 @@ export async function processSubmission(
                 if (passed) {
                     testCasesPassed++;
                 } else if (verdict === 'Accepted') {
-                    if (result.error) {
-                        if (result.error.includes('Time Limit')) {
-                            verdict = 'Time Limit Exceeded';
-                        } else if (result.error.includes('Memory Limit')) {
-                            verdict = 'Memory Limit Exceeded';
-                        } else if (result.error.includes('Compilation')) {
-                            verdict = 'Compilation Error';
-                        } else {
-                            verdict = 'Runtime Error';
-                        }
-                    } else {
-                        verdict = 'Wrong Answer';
-                    }
+                    verdict = verdictFor(result);
                 }
 
                 // Emit progress update
@@ -154,6 +164,12 @@ export async function processSubmission(
                 });
 
             } catch (error) {
+                // A judge outage is our fault, not the submission's. Let it bubble
+                // up so the job is retried instead of scoring a bogus verdict.
+                if (error instanceof ExecutionServiceError) {
+                    throw error;
+                }
+
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
                 results.push({
@@ -193,6 +209,20 @@ export async function processSubmission(
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        // Judge outage: leave the submission unscored and queued so BullMQ's
+        // retries can pick it up once the backend is healthy again. Marking it
+        // "Runtime Error" would permanently blame the user for our downtime.
+        if (error instanceof ExecutionServiceError) {
+            console.error(`⚠️  Judge backend unavailable: ${errorMessage}`);
+
+            await Submission.findByIdAndUpdate(submissionId, { status: 'queued' });
+            emitStatus(socket, userId, submissionId, 'queued', {
+                error: 'Judge temporarily unavailable — retrying.',
+            });
+
+            throw error;
+        }
 
         await Submission.findByIdAndUpdate(submissionId, {
             status: 'completed',

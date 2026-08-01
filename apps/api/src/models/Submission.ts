@@ -1,13 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import {
-    Submission as ISubmission,
-    TestCaseResult,
-    Language,
-    SubmissionStatus,
-    Verdict
-} from '@codelab/shared';
+import { Submission as ISubmission, TestCaseResult } from '@codelab/shared';
 
-export interface SubmissionDocument extends Omit<ISubmission, 'id'>, Document { }
+// problemId is persisted as an ObjectId reference, not a string.
+export interface SubmissionDocument extends Omit<ISubmission, 'id' | 'problemId'>, Document {
+    problemId: mongoose.Types.ObjectId;
+}
 
 const TestCaseResultSchema = new Schema<TestCaseResult>({
     passed: { type: Boolean, required: true },
@@ -29,7 +26,7 @@ const SubmissionSchema = new Schema<SubmissionDocument>({
         type: Schema.Types.ObjectId,
         ref: 'Problem',
         required: true,
-    } as any,
+    },
     problemSlug: {
         type: String,
         required: true,
@@ -78,8 +75,8 @@ const SubmissionSchema = new Schema<SubmissionDocument>({
     timestamps: true,
     toJSON: {
         virtuals: true,
-        transform: (_, ret: any) => {
-            ret.id = ret._id.toString();
+        transform: (_, ret: Record<string, unknown>) => {
+            ret.id = String(ret._id);
             delete ret._id;
             delete ret.__v;
             return ret;

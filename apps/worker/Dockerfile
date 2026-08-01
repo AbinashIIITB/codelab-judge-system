@@ -4,10 +4,18 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy every workspace manifest — `npm ci` validates the whole workspace tree
+# against the lockfile and fails if any of them are missing.
+COPY package.json package-lock.json* tsconfig.base.json ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/shared/package.json ./packages/shared/
+
+# @codelab/shared has a `prepare` script that runs tsc on install, so its
+# sources must be present before npm ci or the install fails with no inputs.
+COPY packages/shared/tsconfig.json ./packages/shared/
+COPY packages/shared/src ./packages/shared/src
 
 RUN npm ci
 
