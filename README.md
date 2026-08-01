@@ -56,22 +56,39 @@ npm install
 # Copy environment file
 cp .env.example .env
 # Edit .env with your configuration
+```
 
-# Seed the database with sample problems
-npm run db:seed
+### Build the execution images
+
+Do this **before** submitting anything — the worker spawns one of these per test
+case, and submissions fail with "image not found" until they exist.
+
+```bash
+./docker/images/build.sh
+
+# Creates codelab-cpp, codelab-python, codelab-java and
+# codelab-javascript, all tagged :latest
 ```
 
 ### Run with Docker Compose (Recommended)
 
 ```bash
-# Start all services
-docker-compose up -d
+# Start everything (Mongo and Redis included)
+docker compose up -d
+
+# Seed the database once Mongo is up
+npm run db:seed
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
+Frontend on http://localhost:3000, API on http://localhost:4000.
+
 ### Run Individually (Development)
+
+Mongo and Redis still need to be running — `docker compose up -d mongodb redis`
+is the easiest way.
 
 ```bash
 # Terminal 1: Frontend
@@ -82,20 +99,6 @@ npm run dev:api    # http://localhost:4000
 
 # Terminal 3: Worker Service
 npm run dev:worker
-```
-
-### Build Docker Execution Images
-
-```bash
-cd docker/images
-chmod +x build.sh
-./build.sh
-
-# This creates:
-# - codelab-cpp:latest
-# - codelab-python:latest
-# - codelab-java:latest
-# - codelab-javascript:latest
 ```
 
 ## 📦 Deployment
@@ -124,25 +127,32 @@ Or connect your GitHub repo to Vercel:
 
 ### Required Environment Variables
 
+See [.env.example](.env.example) for the annotated list. The ones that matter
+in production:
+
 ```env
-# Database
+# API + worker
 MONGODB_URI=mongodb://...
 REDIS_URL=redis://...
 
-# Auth (NextAuth.js)
-NEXTAUTH_URL=https://your-domain.vercel.app
-NEXTAUTH_SECRET=your-secret-key
+# Required in production — the API refuses to start without them
+CORS_ORIGIN=https://your-frontend.vercel.app   # comma-separated, or "*"
+WORKER_API_KEY=<a real secret>                 # must match on API and worker
 
-# OAuth (Optional)
-GITHUB_ID=...
-GITHUB_SECRET=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+# Worker only — where it reaches the API's WebSocket server
+API_WS_URL=https://your-api.railway.app
 
-# API URLs (for frontend)
+# Frontend
 NEXT_PUBLIC_API_URL=https://your-api.railway.app
 NEXT_PUBLIC_WS_URL=wss://your-api.railway.app
 ```
+
+> **`NEXT_PUBLIC_*` is inlined at build time.** Setting it only in the runtime
+> environment has no effect on the browser bundle. On Vercel, set it before
+> building; with Docker, pass it as a build arg (`docker-compose.yml` already does).
+
+Auth is not implemented yet — `next-auth` is a dependency but no provider or
+route exists, so submissions are attributed to an `anonymous` user.
 
 ## 🧪 Seeded Problems
 
@@ -185,13 +195,23 @@ apps/worker/       # Execution worker
 
 ## 🛡️ Security
 
-- Docker containers run with:
-  - Network disabled
-  - Memory limits (256MB default)
-  - CPU limits (50%)
-  - Process limits (64 PIDs)
-  - Read-only root filesystem
-  - Non-root user
+Each submission runs in a throwaway container with:
+
+- Networking disabled (`NetworkMode: none`)
+- Memory limit (256 MB default, no swap — an OOM is reported as Memory Limit Exceeded)
+- CPU limit (50% of one core)
+- Process limit (64 PIDs)
+- `no-new-privileges` set, and the process runs as a non-root user
+- A hard wall-clock kill, after which the container is force-removed
+
+The root filesystem is writable, because the submission's source is compiled
+inside the container. Isolation comes from the container being discarded after
+every single test case.
+
+`WORKER_API_KEY` is a shared secret between the API and the worker. It guards
+the hidden-test-case endpoint and authenticates the worker's status relay, so
+set it to a real secret in any deployment — both services refuse to start
+without it when `NODE_ENV=production`.
 
 ## 📄 License
 

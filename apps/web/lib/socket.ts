@@ -2,13 +2,30 @@
 
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
-
 let socket: Socket | null = null;
+
+/**
+ * Resolve the WebSocket URL. Mirrors getApiBaseUrl(): an explicit
+ * NEXT_PUBLIC_WS_URL (or NEXT_PUBLIC_API_URL) wins so hosted deployments work,
+ * with the :4000-on-this-host guess only as a development fallback.
+ */
+function getWsUrl(): string {
+    const configured = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_API_URL;
+    if (configured) {
+        return configured.replace(/\/$/, '');
+    }
+
+    if (typeof window !== 'undefined') {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.hostname}:4000`;
+    }
+
+    return 'ws://localhost:4000';
+}
 
 export function getSocket(): Socket {
     if (!socket) {
-        socket = io(WS_URL, {
+        socket = io(getWsUrl(), {
             autoConnect: false,
             transports: ['websocket', 'polling'],
         });
@@ -57,6 +74,18 @@ export function onSubmissionStatus(
     return () => {
         sock.off('submission:status', callback);
     };
+}
+
+/**
+ * Follow a specific submission. The judge relays progress into a per-submission
+ * room, so this is what delivers live verdicts without needing a signed-in user.
+ */
+export function joinSubmissionRoom(submissionId: string): void {
+    getSocket().emit('join:submission', submissionId);
+}
+
+export function leaveSubmissionRoom(submissionId: string): void {
+    getSocket().emit('leave:submission', submissionId);
 }
 
 export function joinProblemRoom(problemSlug: string): void {

@@ -3,13 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { ProblemDescription } from '@/components/problems/ProblemDescription';
-import { Console } from '@/components/editor/Console';
 import { problemsApi, submissionsApi } from '@/lib/api';
-import { connectSocket, onSubmissionStatus, SubmissionStatusUpdate } from '@/lib/socket';
+import {
+    connectSocket,
+    onSubmissionStatus,
+    joinSubmissionRoom,
+    leaveSubmissionRoom,
+    SubmissionStatusUpdate,
+} from '@/lib/socket';
 import { LANGUAGE_CONFIG, STARTER_CODE, Language } from '@codelab/shared';
 
 // Dynamic import for Monaco Editor (client-side only)
@@ -115,21 +117,6 @@ You may assume that each input would have **exactly one solution**, and you may 
         }
     }, [language, problem]);
 
-    // Set up WebSocket connection
-    useEffect(() => {
-        const socket = connectSocket();
-
-        const unsubscribe = onSubmissionStatus((update: SubmissionStatusUpdate) => {
-            if (update.submissionId === submissionId) {
-                handleStatusUpdate(update);
-            }
-        });
-
-        return () => {
-            unsubscribe();
-        };
-    }, [submissionId]);
-
     const handleStatusUpdate = useCallback((update: SubmissionStatusUpdate) => {
         const timestamp = new Date();
 
@@ -158,6 +145,54 @@ You may assume that each input would have **exactly one solution**, and you may 
         setConsoleOutput(prev => [...prev, { type, message, timestamp }]);
         setShowConsole(true);
     };
+
+    // Live submission updates.
+    //
+    // The judge relays progress into a per-submission room, so we join it as soon
+    // as we have an id. Polling runs alongside as a safety net: it covers a
+    // dropped socket, and the race where a very fast verdict lands before we joined.
+    useEffect(() => {
+        if (!submissionId) return;
+
+        connectSocket();
+        joinSubmissionRoom(submissionId);
+
+        let finished = false;
+
+        const unsubscribe = onSubmissionStatus((update: SubmissionStatusUpdate) => {
+            if (update.submissionId !== submissionId || finished) return;
+            if (update.status === 'completed') finished = true;
+            handleStatusUpdate(update);
+        });
+
+        const pollTimer = setInterval(async () => {
+            if (finished) return;
+            try {
+                const submission = await submissionsApi.get(submissionId);
+                if (submission.status === 'completed' && !finished) {
+                    finished = true;
+                    handleStatusUpdate({
+                        submissionId,
+                        status: 'completed',
+                        verdict: submission.verdict,
+                        runtime: submission.runtime,
+                        memory: submission.memory,
+                        testCasesPassed: submission.testCasesPassed,
+                        totalTestCases: submission.totalTestCases,
+                        error: submission.error,
+                    });
+                }
+            } catch {
+                // Transient failure — keep polling
+            }
+        }, 3000);
+
+        return () => {
+            unsubscribe();
+            clearInterval(pollTimer);
+            leaveSubmissionRoom(submissionId);
+        };
+    }, [submissionId, handleStatusUpdate]);
 
     const handleRun = async () => {
         if (!problem) return;

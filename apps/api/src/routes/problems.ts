@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Problem } from '../models';
 import { Difficulty } from '@codelab/shared';
+import { env } from '../config/env';
 
 const router = Router();
 
@@ -98,8 +99,10 @@ router.get('/:slug/testcases', async (req: Request, res: Response) => {
         const { slug } = req.params;
         const apiKey = req.headers['x-api-key'];
 
-        // Simple API key check for internal worker access
-        if (apiKey !== process.env.WORKER_API_KEY) {
+        // Simple API key check for internal worker access.
+        // env.workerApiKey is always a non-empty string, so a missing header can
+        // never accidentally match and leak hidden test cases.
+        if (typeof apiKey !== 'string' || apiKey !== env.workerApiKey) {
             return res.status(403).json({ error: 'Forbidden' });
         }
 

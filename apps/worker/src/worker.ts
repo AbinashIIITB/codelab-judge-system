@@ -14,6 +14,15 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/codelab';
 const API_WS_URL = process.env.API_WS_URL || 'http://localhost:4000';
 
+// Must match the API's WORKER_API_KEY, otherwise the API will not relay this
+// worker's status updates to the browser.
+const WORKER_API_KEY = process.env.WORKER_API_KEY || 'dev-worker-key';
+
+if (!process.env.WORKER_API_KEY && process.env.NODE_ENV === 'production') {
+    console.error('WORKER_API_KEY must be set in production.');
+    process.exit(1);
+}
+
 // Redis connection
 const redisConnection = new IORedis(REDIS_URL, {
     maxRetriesPerRequest: null,
@@ -23,7 +32,12 @@ const redisConnection = new IORedis(REDIS_URL, {
 let socket: Socket;
 
 async function connectSocket(): Promise<void> {
-    socket = SocketClient(API_WS_URL);
+    socket = SocketClient(API_WS_URL, {
+        auth: { workerKey: WORKER_API_KEY },
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+    });
 
     socket.on('connect', () => {
         console.log('📡 Connected to API WebSocket');
@@ -31,6 +45,10 @@ async function connectSocket(): Promise<void> {
 
     socket.on('disconnect', () => {
         console.log('📡 Disconnected from API WebSocket');
+    });
+
+    socket.on('connect_error', (error) => {
+        console.warn('📡 API WebSocket connection error:', error.message);
     });
 }
 
@@ -54,6 +72,8 @@ const submissionWorker = new Worker(
     {
         connection: redisConnection,
         concurrency: 5, // Process up to 5 submissions concurrently
+        // Don't consume jobs until Mongo and the socket are up (see start())
+        autorun: false,
     }
 );
 
@@ -74,6 +94,7 @@ const runCodeWorker = new Worker(
     {
         connection: redisConnection,
         concurrency: 10, // Higher concurrency for quick runs
+        autorun: false,
     }
 );
 
@@ -116,6 +137,11 @@ async function start() {
         console.log('✅ Connected to MongoDB');
 
         await connectSocket();
+
+        // Only now start consuming — a job picked up before Mongo was connected
+        // would have failed on its first query.
+        void submissionWorker.run();
+        void runCodeWorker.run();
 
         console.log('✅ Worker is ready and listening for jobs');
     } catch (error) {

@@ -53,8 +53,11 @@ Output: [0,1]
         ],
         hiddenTestCases: [
             { input: '2\n3 3\n6', expectedOutput: '0 1', isHidden: true },
-            { input: '5\n1 5 3 7 2\n10', expectedOutput: '1 3', isHidden: true },
-            { input: '6\n-1 -2 -3 4 5 6\n3', expectedOutput: '2 5', isHidden: true },
+            // nums[2] + nums[3] = 3 + 7 = 10 (was '1 3', which sums to 12)
+            { input: '5\n1 5 3 7 2\n10', expectedOutput: '2 3', isHidden: true },
+            // target 11 has exactly one pair (5 + 6). The previous target of 3 had
+            // two — -1+4 and -3+6 — so a correct solution could fail on output order.
+            { input: '6\n-1 -2 -3 4 5 6\n11', expectedOutput: '4 5', isHidden: true },
         ],
         tags: ['array', 'hash-table'],
         timeLimit: 2000,
@@ -107,7 +110,7 @@ Print the reversed list as space-separated values.`,
             { input: '2\n1 2', expectedOutput: '2 1', isHidden: false },
         ],
         hiddenTestCases: [
-            { input: '0', expectedOutput: '', isHidden: true },
+            { input: '0', expectedOutput: ' ', isHidden: true },
             { input: '1\n1', expectedOutput: '1', isHidden: true },
             { input: '10\n1 2 3 4 5 6 7 8 9 10', expectedOutput: '10 9 8 7 6 5 4 3 2 1', isHidden: true },
         ],
@@ -228,7 +231,9 @@ Print the merged sorted list as space-separated values.`,
         ],
         sampleTestCases: [
             { input: '3\n1 2 4\n3\n1 3 4', expectedOutput: '1 1 2 3 4 4', isHidden: false },
-            { input: '0\n\n0', expectedOutput: '', isHidden: false },
+            // Trailing newline keeps the 4-line shape of every other case, so a
+            // solution that reads four lines doesn't hit EOF on the empty lists.
+            { input: '0\n\n0\n', expectedOutput: ' ', isHidden: false },
         ],
         hiddenTestCases: [
             { input: '0\n\n1\n0', expectedOutput: '0', isHidden: true },

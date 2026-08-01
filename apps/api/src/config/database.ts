@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/codelab';
+import { env } from './env';
 
 export async function connectDatabase(): Promise<void> {
     try {
-        await mongoose.connect(MONGODB_URI);
+        await mongoose.connect(env.mongodbUri);
         console.log('✅ Connected to MongoDB');
 
         mongoose.connection.on('error', (error) => {

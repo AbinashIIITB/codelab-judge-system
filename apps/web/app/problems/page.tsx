@@ -109,7 +109,7 @@ export default function ProblemsPage() {
                                     <td colSpan={5} className="px-2 py-4 text-center">No problems found</td>
                                 </tr>
                             ) : (
-                                problems.map((problem, index) => (
+                                problems.map((problem) => (
                                     <tr key={problem.id} className="even:bg-[#F8F8F8] hover:bg-[#E8E8E8]">
                                         <td className="px-2 py-1 text-center border-r border-[#CCCCCC]">{problem.id}</td>
                                         <td className="px-2 py-1 border-r border-[#CCCCCC]">

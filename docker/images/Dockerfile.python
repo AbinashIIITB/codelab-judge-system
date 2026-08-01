@@ -1,9 +1,18 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+# Create the unprivileged user first, then hand it the working directory.
+# WORKDIR on its own creates a root-owned /app, which left `runner` unable to
+# write the submission source — every run failed with "Permission denied".
+RUN useradd -m -s /bin/bash runner \
+    && mkdir -p /app \
+    && chown runner:runner /app
 
-# Create non-root user for security
-RUN useradd -m -s /bin/bash runner
+WORKDIR /app
 USER runner
+
+# Keep stdout unbuffered so output isn't lost when a container is killed at the
+# time limit, and don't scatter .pyc files through the sandbox.
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 CMD ["python3"]

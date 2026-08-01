@@ -1,10 +1,31 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Server } from 'socket.io';
 import { Submission, Problem } from '../models';
-import { getSubmissionQueue, getRunCodeQueue } from '../config/redis';
-import { SubmitRequest, RunCodeRequest, Language } from '@codelab/shared';
+import { getSubmissionQueue, getRunCodeQueue, getRunCodeQueueEvents } from '../config/redis';
+import { SubmitRequest, RunCodeRequest, Language, SUPPORTED_LANGUAGES } from '@codelab/shared';
 
 const router = Router();
+
+const MAX_CODE_LENGTH = 100_000;
+
+/** Returns an error message if the payload is invalid, otherwise null. */
+function validateCodePayload(
+    problemSlug: unknown,
+    code: unknown,
+    language: unknown
+): string | null {
+    if (!problemSlug || !code || !language) {
+        return 'Missing required fields: problemSlug, code, language';
+    }
+    if (typeof code !== 'string' || code.length > MAX_CODE_LENGTH) {
+        return `Code must be a string of at most ${MAX_CODE_LENGTH} characters`;
+    }
+    if (!SUPPORTED_LANGUAGES.includes(language as Language)) {
+        return `Unsupported language. Supported: ${SUPPORTED_LANGUAGES.join(', ')}`;
+    }
+    return null;
+}
 
 // POST /api/submissions - Submit code for full evaluation
 router.post('/', async (req: Request, res: Response) => {
@@ -15,16 +36,20 @@ router.post('/', async (req: Request, res: Response) => {
         const userId = req.headers['x-user-id'] as string || 'anonymous';
 
         // Validate input
-        if (!problemSlug || !code || !language) {
-            return res.status(400).json({
-                error: 'Missing required fields: problemSlug, code, language'
-            });
+        const validationError = validateCodePayload(problemSlug, code, language);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
         }
 
         // Check if problem exists
         const problem = await Problem.findOne({ slug: problemSlug });
         if (!problem) {
             return res.status(404).json({ error: 'Problem not found' });
+        }
+
+        const totalTestCases = problem.sampleTestCases.length + problem.hiddenTestCases.length;
+        if (totalTestCases === 0) {
+            return res.status(422).json({ error: 'Problem has no test cases configured' });
         }
 
         // Create submission record
@@ -35,7 +60,7 @@ router.post('/', async (req: Request, res: Response) => {
             code,
             language: language as Language,
             status: 'pending',
-            totalTestCases: problem.sampleTestCases.length + problem.hiddenTestCases.length,
+            totalTestCases,
         });
 
         // Add to queue
@@ -77,10 +102,9 @@ router.post('/run', async (req: Request, res: Response) => {
         const { problemSlug, code, language, customInput } = req.body as RunCodeRequest;
 
         // Validate input
-        if (!problemSlug || !code || !language) {
-            return res.status(400).json({
-                error: 'Missing required fields: problemSlug, code, language'
-            });
+        const validationError = validateCodePayload(problemSlug, code, language);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
         }
 
         // Get sample test cases
@@ -106,11 +130,22 @@ router.post('/run', async (req: Request, res: Response) => {
         });
 
         // Wait for result (with timeout)
-        const result = await job.waitUntilFinished(queue.events, 30000);
+        const queueEvents = getRunCodeQueueEvents();
+        const result = await job.waitUntilFinished(queueEvents, 30000);
 
         res.json(result);
     } catch (error) {
         console.error('Error running code:', error);
+        const message = error instanceof Error ? error.message : '';
+
+        // waitUntilFinished rejects with a timeout message when no worker picks
+        // the job up — surface that instead of a generic 500.
+        if (message.includes('timed out') || message.includes('timeout')) {
+            return res.status(504).json({
+                error: 'Execution timed out. The judge worker may be unavailable.',
+            });
+        }
+
         res.status(500).json({ error: 'Failed to run code' });
     }
 });
@@ -119,6 +154,10 @@ router.post('/run', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(404).json({ error: 'Submission not found' });
+        }
 
         const submission = await Submission.findById(id);
 

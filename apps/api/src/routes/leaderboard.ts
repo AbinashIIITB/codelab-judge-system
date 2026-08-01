@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Submission, User, Problem } from '../models';
+import { Submission, Problem } from '../models';
 
 const router = Router();
 
@@ -137,6 +137,9 @@ router.get('/daily/challenge', async (req: Request, res: Response) => {
         const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
 
         const problemCount = await Problem.countDocuments();
+        if (problemCount === 0) {
+            return res.status(404).json({ error: 'No daily challenge available' });
+        }
         const problemIndex = dayOfYear % problemCount;
 
         const dailyProblem = await Problem.findOne()

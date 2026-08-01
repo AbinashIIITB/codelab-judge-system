@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { Problem as IProblem, TestCase, Difficulty, Language, STARTER_CODE } from '@codelab/shared';
+import { Problem as IProblem, TestCase, STARTER_CODE } from '@codelab/shared';
 
-export interface ProblemDocument extends Omit<IProblem, 'id'>, Document { }
+// starterCode is persisted as a Mongo Map, not a plain object
+export interface ProblemDocument extends Omit<IProblem, 'id' | 'starterCode'>, Document {
+    starterCode: Map<string, string>;
+}
 
 const TestCaseSchema = new Schema<TestCase>({
     input: { type: String, required: true },
@@ -58,8 +61,8 @@ const ProblemSchema = new Schema<ProblemDocument>({
     timestamps: true,
     toJSON: {
         virtuals: true,
-        transform: (_, ret) => {
-            ret.id = ret._id.toString();
+        transform: (_, ret: Record<string, unknown>) => {
+            ret.id = String(ret._id);
             delete ret._id;
             delete ret.__v;
             // Don't expose hidden test cases in regular queries
@@ -69,8 +72,7 @@ const ProblemSchema = new Schema<ProblemDocument>({
     },
 });
 
-// Indexes
-ProblemSchema.index({ slug: 1 });
+// Indexes ({ slug: 1 } is already created by `unique: true` on the field)
 ProblemSchema.index({ difficulty: 1 });
 ProblemSchema.index({ tags: 1 });
 

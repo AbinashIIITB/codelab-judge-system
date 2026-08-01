@@ -1,13 +1,32 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 interface FetchOptions extends RequestInit {
     params?: Record<string, string>;
+}
+
+/**
+ * Resolve the API base URL.
+ *
+ * NEXT_PUBLIC_API_URL is authoritative when set — that is what makes a hosted
+ * deployment (custom domain, HTTPS, no :4000) work. Only when it is absent do we
+ * fall back to guessing port 4000 on the current host, which is the convenient
+ * behaviour for local/LAN development.
+ */
+export function getApiBaseUrl(): string {
+    const configured = process.env.NEXT_PUBLIC_API_URL;
+    if (configured) {
+        return configured.replace(/\/$/, '');
+    }
+
+    if (typeof window !== 'undefined') {
+        return `${window.location.protocol}//${window.location.hostname}:4000`;
+    }
+
+    return 'http://localhost:4000';
 }
 
 async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
     const { params, ...fetchOptions } = options;
 
-    let url = `${API_URL}/api${endpoint}`;
+    let url = `${getApiBaseUrl()}/api${endpoint}`;
 
     if (params) {
         const searchParams = new URLSearchParams(params);

@@ -35,8 +35,8 @@ const UserSchema = new Schema<UserDocument>({
     timestamps: true,
     toJSON: {
         virtuals: true,
-        transform: (_, ret) => {
-            ret.id = ret._id.toString();
+        transform: (_, ret: Record<string, unknown>) => {
+            ret.id = String(ret._id);
             delete ret._id;
             delete ret.__v;
             return ret;
@@ -44,8 +44,7 @@ const UserSchema = new Schema<UserDocument>({
     },
 });
 
-// Indexes
-UserSchema.index({ email: 1 });
+// Indexes ({ email: 1 } is already created by `unique: true` on the field)
 UserSchema.index({ acceptedSubmissions: -1 });
 
 export const User = mongoose.model<UserDocument>('User', UserSchema);

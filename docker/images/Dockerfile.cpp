@@ -1,12 +1,13 @@
-FROM gcc:12-slim
+FROM gcc:12
+
+# Create the unprivileged user first, then hand it the working directory.
+# WORKDIR on its own creates a root-owned /app, which left `runner` unable to
+# write the submission source — every run failed with "Permission denied".
+RUN useradd -m -s /bin/bash runner \
+    && mkdir -p /app \
+    && chown runner:runner /app
 
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user for security
-RUN useradd -m -s /bin/bash runner
 USER runner
 
 CMD ["/bin/bash"]

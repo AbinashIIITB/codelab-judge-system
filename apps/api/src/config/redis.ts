@@ -1,11 +1,10 @@
-import { Queue } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import IORedis from 'ioredis';
 import { SUBMISSION_QUEUE_NAME, RUN_CODE_QUEUE_NAME } from '@codelab/shared';
-
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+import { env } from './env';
 
 // Redis connection for BullMQ
-export const redisConnection = new IORedis(REDIS_URL, {
+export const redisConnection = new IORedis(env.redisUrl, {
     maxRetriesPerRequest: null,
 });
 
@@ -14,6 +13,7 @@ export let submissionQueue: Queue;
 
 // Run code queue (for quick test runs)
 export let runCodeQueue: Queue;
+export let runCodeQueueEvents: QueueEvents;
 
 export async function initializeQueues(): Promise<void> {
     try {
@@ -39,6 +39,10 @@ export async function initializeQueues(): Promise<void> {
             },
         });
 
+        runCodeQueueEvents = new QueueEvents(RUN_CODE_QUEUE_NAME, {
+            connection: redisConnection,
+        });
+
         console.log('✅ BullMQ queues initialized');
     } catch (error) {
         console.error('Failed to initialize queues:', error);
@@ -52,4 +56,17 @@ export function getSubmissionQueue(): Queue {
 
 export function getRunCodeQueue(): Queue {
     return runCodeQueue;
+}
+
+export function getRunCodeQueueEvents(): QueueEvents {
+    return runCodeQueueEvents;
+}
+
+export async function closeQueues(): Promise<void> {
+    await Promise.allSettled([
+        submissionQueue?.close(),
+        runCodeQueue?.close(),
+        runCodeQueueEvents?.close(),
+    ]);
+    redisConnection.disconnect();
 }

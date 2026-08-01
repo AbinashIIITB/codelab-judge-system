@@ -1,8 +1,25 @@
 import mongoose from 'mongoose';
 import { Socket } from 'socket.io-client';
-import { Language, Verdict, SubmissionStatus, TestCase, TestCaseResult } from '@codelab/shared';
-import { DockerExecutor } from '../executor/DockerExecutor';
+import { Language, Verdict, SubmissionStatus, TestCaseResult } from '@codelab/shared';
+import { DockerExecutor, ExecutionErrorType } from '../executor/DockerExecutor';
 import { compareOutput } from '../utils/compareOutput';
+
+/** Map an executor failure to the verdict shown to the user. */
+function verdictFor(errorType?: ExecutionErrorType): Verdict {
+    switch (errorType) {
+        case 'timeout':
+            return 'Time Limit Exceeded';
+        case 'memory':
+            return 'Memory Limit Exceeded';
+        case 'compilation':
+            return 'Compilation Error';
+        case 'runtime':
+        case 'internal':
+            return 'Runtime Error';
+        default:
+            return 'Wrong Answer';
+    }
+}
 
 // Submission model (duplicated to avoid circular dependency)
 const SubmissionSchema = new mongoose.Schema({
@@ -91,6 +108,11 @@ export async function processSubmission(
         let maxMemory = 0;
         let verdict: Verdict = 'Accepted';
         let testCasesPassed = 0;
+        let compilationError: string | undefined;
+
+        if (allTestCases.length === 0) {
+            throw new Error('Problem has no test cases configured');
+        }
 
         for (let i = 0; i < allTestCases.length; i++) {
             const testCase = allTestCases[i];
@@ -122,19 +144,14 @@ export async function processSubmission(
                 if (passed) {
                     testCasesPassed++;
                 } else if (verdict === 'Accepted') {
-                    if (result.error) {
-                        if (result.error.includes('Time Limit')) {
-                            verdict = 'Time Limit Exceeded';
-                        } else if (result.error.includes('Memory Limit')) {
-                            verdict = 'Memory Limit Exceeded';
-                        } else if (result.error.includes('Compilation')) {
-                            verdict = 'Compilation Error';
-                        } else {
-                            verdict = 'Runtime Error';
-                        }
-                    } else {
-                        verdict = 'Wrong Answer';
-                    }
+                    verdict = verdictFor(result.errorType);
+                }
+
+                // A compile failure is not per-test-case — stop immediately rather
+                // than recompiling the same broken source for every remaining test.
+                if (result.errorType === 'compilation') {
+                    compilationError = result.error;
+                    break;
                 }
 
                 // Emit progress update
@@ -157,18 +174,20 @@ export async function processSubmission(
             }
         }
 
-        // Calculate average runtime
-        const avgRuntime = totalRuntime / allTestCases.length;
+        // Average over the test cases actually executed (a compile error breaks
+        // out early, so `results.length` is not always `allTestCases.length`)
+        const avgRuntime = results.length > 0 ? Math.round(totalRuntime / results.length) : 0;
 
         // Update final submission status
         await Submission.findByIdAndUpdate(submissionId, {
             status: 'completed',
             verdict,
-            runtime: Math.round(avgRuntime),
+            runtime: avgRuntime,
             memory: maxMemory,
             testCasesPassed,
             totalTestCases: allTestCases.length,
             testCaseResults: results,
+            error: compilationError,
             completedAt: new Date(),
         });
 
@@ -177,8 +196,9 @@ export async function processSubmission(
             verdict,
             testCasesPassed,
             totalTestCases: allTestCases.length,
-            runtime: Math.round(avgRuntime),
+            runtime: avgRuntime,
             memory: maxMemory,
+            error: compilationError,
         });
 
     } catch (error) {
