@@ -132,6 +132,12 @@ ghcr.io/abinashiiitb/codelab-web:latest
 
 Both `:latest` and a `:<commit-sha>` tag are pushed, so you can pin a deploy.
 
+Pushes build `linux/amd64`, which is what every mainstream cloud host runs.
+`linux/arm64` is emulated on GitHub's runners and takes over an hour, so it is
+built only for tagged releases (`v*`) or by running the workflow manually with
+the **arm64** option ticked. Do that before deploying to an ARM box such as an
+Oracle Cloud Always Free instance or Apple Silicon.
+
 For the web image, set the repository variables `NEXT_PUBLIC_API_URL` and
 `NEXT_PUBLIC_WS_URL` (Settings → Secrets and variables → Actions → Variables)
 before the build — they are compiled into the browser bundle and cannot be

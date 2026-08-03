@@ -15,6 +15,11 @@ on:
     branches: [master, main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      arm64:
+        description: 'Also build linux/arm64 (slow — emulated)'
+        type: boolean
+        default: false
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -42,9 +47,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # arm64 is emulated, which is slower but means the images also run on
-      # Apple Silicon and on free ARM tiers such as Oracle Cloud.
+      # arm64 has to be emulated on GitHub's x86 runners, and it pushed a single
+      # image past an hour. Build it only for tagged releases or on request, so
+      # ordinary pushes stay fast; amd64 covers every mainstream cloud host.
+      - name: Select platforms
+        id: platforms
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ] || [ "${{ inputs.arm64 }}" = "true" ]; then
+            echo 'value=linux/amd64,linux/arm64' >> "$GITHUB_OUTPUT"
+          else
+            echo 'value=linux/amd64' >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: docker/setup-qemu-action@v3
+        if: contains(steps.platforms.outputs.value, 'arm64')
 
       - uses: docker/setup-buildx-action@v3
 
@@ -64,7 +80,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ steps.platforms.outputs.value }}
           push: true
           tags: |
             ${{ steps.meta.outputs.image }}:latest
